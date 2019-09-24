@@ -25,7 +25,6 @@ class LatentRE(nn.Module):
         self.label = None
     
     def forward(self):
-        # pdb.set_trace()
         text, entity_info = self.textRepre(self.pos_word, self.pos_pos1, self.pos_pos2, self.mask)
         neg_samples = self.textRepre(self.neg_word.view(-1, Config.sen_len), 
                                         self.neg_pos1.view(-1, Config.sen_len),

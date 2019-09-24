@@ -18,7 +18,8 @@ class TextRepre(nn.Module):
         nn.init.xavier_normal_(self.pos1_embedding.weight.data)
         nn.init.xavier_normal_(self.pos2_embedding.weight.data)
         self.cnn = CNN(Config.word_embeeding_dim+Config.pos_embedding_dim*2, Config.hidden_size)
-    
+        self.dropout = nn.Dropout(Config.dropout)
+
     def embedding(self, word, pos1, pos2):
         return torch.cat((self.word_embedding(word), 
                             self.pos1_embedding(pos1),
@@ -26,6 +27,7 @@ class TextRepre(nn.Module):
     
     def forward(self, word, pos1, pos2, mask=None):
         embedding = self.embedding(word, pos1, pos2)
+        embedding = self.dropout(embedding)
         text = self.cnn(embedding.permute(0,2,1))
         if mask is not None:
             mask_embedding = embedding * (mask.unsqueeze(2))

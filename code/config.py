@@ -19,3 +19,5 @@ class Config():
     max_epoch = 100
     dev_step = 5
     dropout = 0.5
+    save_epoch = 5
+    save_path = "../ckpt"

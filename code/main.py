@@ -42,7 +42,7 @@ def eval(logit, label):
     
     f1 = (2*precision*recall / (recall+precision+1e-20)).max()
     auc = sklearn.metrics.auc(x=recall, y=precision)
-    print("auc = "+str(auc)+"|\t"+"F1 = "+str(f1))
+    print("auc = "+str(auc)+"| "+"F1 = "+str(f1))
     print('P@100: {} | P@200: {} | P@300: {} | Mean: {}'.format(precision[100], precision[200], precision[300], (precision[100] + precision[200] + precision[300]) / 3))
     
     # plt.xlabel('Recall')
@@ -130,9 +130,46 @@ def train(model, train_dataloader, dev_dataloader=None):
             eval(logits, labels)
             print("---------------------------------------------------------------------------------------------------")
             model.train()
+        
+        if i % Config.save_epoch == 0:
+            torch.save(model.state_dict(), os.path.join(Config.save_path, "ckpt"+str(i)))
 
 
-
+def test(model, test_dataloader):
+    model.cuda()
+    print("begin testing...")
+    for i in range(Config.max_epoch):
+        if not os.path.exists(os.path.join(Config.save_path, "ckpt"+str(i))):
+            continue
+        model.load_static_dict(torch.load(os.path.join(Config.save_path, "ckpt"+str(i))))
+        model.eval()
+        
+        logits = []
+        labels = []
+        tot = 0
+        tot_correct = 0
+        na_correct = 0
+        not_na_correct = 0
+        for j in range(int(test_dataloader.instance_tot / Config.batch_size)):
+            batch_data = test_dataloader.next_batch()
+            model.pos_word = to_tensor(batch_data["pos_word"])
+            model.pos_pos1 = to_tensor(batch_data["pos_pos1"])
+            model.pos_pos2 = to_tensor(batch_data["pos_pos2"])
+            model.label = to_tensor(batch_data["label"])
+            label = batch_data["label"]
+            logit, output = model.test()
+            logits.append(logit.cpu().detach().numpy().tolist())
+            labels.append(label.tolist())
+            output = output.cpu().detach().numpy()
+            tot += label.shape[0]
+            tot_correct += (label==output).sum()
+            na_correct +=np.logical_and(label==output, label==0).sum()
+            not_na_correct += np.logical_and(label==output, label!=0).sum()
+            sys.stdout.write("dev:epoch:%d, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, tot_correct/tot, na_correct/tot, not_na_correct/tot))
+            sys.stdout.flush()
+        print("")
+        eval(logits, labels)
+        print("---------------------------------------------------------------------------------------------------")
 
 
 if __name__ == "__main__":
@@ -143,12 +180,23 @@ if __name__ == "__main__":
     # set para
     os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda
 
+    # set save path
+    if not os.path.exists(Config.save_path):
+        os.mkdir(Config.save_path)
     
     # train
     train_dataloader = Dataloader("train")
     dev_dataloader = Dataloader("test")
     model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
     train(model, train_dataloader, dev_dataloader)
+
+    # test
+    if not os.path.exists(Config.save_path):
+        exit("There are not checkpoints to test!")
+    train_dataloader = Dataloader("train")
+    test_dataloader = Dataloader("test")
+    model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
+
 
         
 
