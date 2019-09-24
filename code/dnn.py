@@ -14,12 +14,9 @@ class MLP(nn.Module):
     '''
     def __init__(self, input_size, output_size, hidden_size):
         super(MLP, self).__init__()
-        self.modules = [
-            nn.Linear(input_size, output_size),
-            # nn.ReLU(),
-        ]
-        self.net = nn.Sequential(*self.modules)
-    
+        self.net = nn.Linear(input_size, output_size)
+        nn.init.xavier_uniform_(self.net.weight.data)
+
     def forward(self, input):
         return self.net(input)
 
@@ -31,12 +28,10 @@ class CNN(nn.Module):
     '''
     def __init__(self, input_size, hidden_size):
         super(CNN, self).__init__()
-        self.modules = [
-            nn.Conv1d(in_channels=input_size, out_channels=hidden_size, kernel_size=3, padding=1),
-            nn.ReLU(),
-        ]
+        self.net = nn.Conv1d(in_channels=input_size, out_channels=hidden_size, kernel_size=3, padding=1)
+        self.relu = nn.ReLU()
         self.dropout = nn.Dropout(Config.dropout)
-        self.net = nn.Sequential(*self.modules)
+        nn.init.xavier_uniform_(self.net.weight.data)
 
     def maxPooling(self, x):
         '''
@@ -46,7 +41,7 @@ class CNN(nn.Module):
         return text
     
     def forward(self, input):
-        return self.dropout(self.maxPooling(self.net(input)))
+        return self.dropout(self.relu(self.maxPooling(self.net(input))))
 
 class RNN(nn.Module):
     '''
@@ -57,10 +52,7 @@ class RNN(nn.Module):
     '''
     def __init__(self, input_size, hidden_size, num_layers=1, dropout=0.5, bidirectional=False):
         super(RNN, self).__init__()
-        self.modules = [
-            nn.LSTM(input_size, hidden_size, num_layers=num_layers, dropout=dropout, bidirectional=bidirectional),
-        ]
-        self.net = nn.Sequential(*self.modules)
+        self.net = nn.LSTM(input_size, hidden_size, num_layers=num_layers, dropout=dropout, bidirectional=bidirectional)
     
     def forward(self, input):
         output, (h_n, c_n) = self.net(input)

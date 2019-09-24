@@ -206,11 +206,10 @@ class Dataloader:
         self.order = list(range(self.instance_tot))
         self.idx = 0
         random.shuffle(self.order)
-        self.weight = np.ones((Config.rel_num), dtype=float)
+        self.weight = np.zeros((Config.rel_num), dtype=float)
         for i in self.data_label:
             self.weight[i] += 1
-        for i in range(Config.rel_num):
-            self.weight[i] = 1 / (self.weight[i]**0.05)
+        self.weight = 1 / self.weight**0.05
 
 
     def next_batch(self):

@@ -4,6 +4,7 @@ model
 import torch
 import torch.nn as nn 
 import pdb 
+# from torch.utils.tensorboard import SummaryWriter
 from config import Config
 from textRepre import TextRepre
 from latent import Loss, EncoderDecoder

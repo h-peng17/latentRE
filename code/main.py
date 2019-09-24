@@ -22,37 +22,41 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
 def eval(logit, label):
     res_list = []
-    for i in range(len(label)):
+    tot = 0
+    for i in range(len(logit)):
+        if label[i] != 0:
+            tot += 1
         for j in range(1, len(logit[i])):
             flag = 0
             if j == label[i]:
                 flag = 1
             res_list.append([logit[i][j], flag])
+            
     #sort res_list
     res_list.sort(key=lambda val: val[0], reverse=True)
-
-    tot = len(res_list)
     precision = np.zeros((len(res_list)), dtype=float)
     recall = np.zeros((len(res_list)), dtype=float)
     corr = 0
     for i, res in enumerate(res_list):
         corr += res[1]
-        precision[i] = corr/tot
-        recall[i] = corr/(i+1)
+        precision[i] = corr/(i+1)
+        recall[i] = corr/tot
     
+    # pdb.set_trace()
     f1 = (2*precision*recall / (recall+precision+1e-20)).max()
     auc = sklearn.metrics.auc(x=recall, y=precision)
     print("auc = "+str(auc)+"| "+"F1 = "+str(f1))
     print('P@100: {} | P@200: {} | P@300: {} | Mean: {}'.format(precision[100], precision[200], precision[300], (precision[100] + precision[200] + precision[300]) / 3))
     
-    # plt.xlabel('Recall')
-    # plt.ylabel('Precision')
-    # plt.ylim([0.3, 1.0])
-    # plt.xlim([0.0, 0.4])
-    # plt.title('Precision-Recall')
-    # plt.legend(loc="upper right")
-    # plt.grid(True)
-    # plt.savefig(os.path.join(result_dir, 'pr_curve'))
+    plt.plot(recall, precision, lw=2, label="model")
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.ylim([0.3, 1.0])
+    plt.xlim([0.0, 0.4])
+    plt.title('Precision-Recall')
+    plt.legend(loc="upper right")
+    plt.grid(True)
+    plt.savefig(os.path.join(Config.save_path, 'pr_curve'))
 
     
 
@@ -64,12 +68,14 @@ def train(model, train_dataloader, dev_dataloader=None):
     model.cuda()
     model.train()
     params = filter(lambda x:x.requires_grad, model.parameters())
-    optimizer = optim.Adam(params, Config.lr)
+    optimizer = optim.SGD(params, Config.lr)
     print("Begin train...")
     for i in range(Config.max_epoch):
         # set train data
         # pdb.set_trace()
         tot = 0
+        tot_na = 0
+        tot_not_na = 0
         tot_correct = 0
         na_correct = 0
         not_na_correct = 0
@@ -93,10 +99,12 @@ def train(model, train_dataloader, dev_dataloader=None):
             # gen res
             output = output.cpu().detach().numpy()
             tot += label.shape[0]
+            tot_na += (label==0).sum()
+            tot_not_na += (label!=0).sum()
             tot_correct += (label==output).sum()
             na_correct +=np.logical_and(label==output, label==0).sum()
             not_na_correct += np.logical_and(label==output, label!=0).sum()
-            sys.stdout.write("train:epoch:%d, loss:%.3f, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, loss, tot_correct/tot, na_correct/tot, not_na_correct/tot))
+            sys.stdout.write("train:epoch:%d, loss:%.3f, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, loss, tot_correct/tot, na_correct/tot_na, not_na_correct/tot_not_na))
             sys.stdout.flush()
         print("")
         
@@ -106,6 +114,8 @@ def train(model, train_dataloader, dev_dataloader=None):
             logits = []
             labels = []
             tot = 0
+            tot_na = 0
+            tot_not_na = 0
             tot_correct = 0
             na_correct = 0
             not_na_correct = 0
@@ -117,22 +127,24 @@ def train(model, train_dataloader, dev_dataloader=None):
                 model.label = to_tensor(batch_data["label"])
                 label = batch_data["label"]
                 logit, output = model.test()
-                logits.append(logit.cpu().detach().numpy().tolist())
-                labels.append(label.tolist())
+                logits.extend(logit.cpu().detach().numpy().tolist())
+                labels.extend(label.tolist())
                 output = output.cpu().detach().numpy()
                 tot += label.shape[0]
+                tot_na += (label==0).sum()
+                tot_not_na += (label!=0).sum()
                 tot_correct += (label==output).sum()
                 na_correct +=np.logical_and(label==output, label==0).sum()
                 not_na_correct += np.logical_and(label==output, label!=0).sum()
-                sys.stdout.write("dev:epoch:%d, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, tot_correct/tot, na_correct/tot, not_na_correct/tot))
+                sys.stdout.write("dev:epoch:%d, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, tot_correct/tot, na_correct/tot_na, not_na_correct/tot_not_na))
                 sys.stdout.flush()
             print("")
             eval(logits, labels)
             print("---------------------------------------------------------------------------------------------------")
             model.train()
         
-        if i % Config.save_epoch == 0:
-            torch.save(model.state_dict(), os.path.join(Config.save_path, "ckpt"+str(i)))
+        # if i % Config.save_epoch == 0:
+            # torch.save(model.state_dict(), os.path.join(Config.save_path, "ckpt"+str(i)))
 
 
 def test(model, test_dataloader):
@@ -143,10 +155,11 @@ def test(model, test_dataloader):
             continue
         model.load_static_dict(torch.load(os.path.join(Config.save_path, "ckpt"+str(i))))
         model.eval()
-        
         logits = []
         labels = []
         tot = 0
+        tot_na = 0
+        tot_not_na = 0
         tot_correct = 0
         na_correct = 0
         not_na_correct = 0
@@ -162,10 +175,12 @@ def test(model, test_dataloader):
             labels.append(label.tolist())
             output = output.cpu().detach().numpy()
             tot += label.shape[0]
+            tot_na += (label==0).sum()
+            tot_not_na += (label!=0).sum()
             tot_correct += (label==output).sum()
             na_correct +=np.logical_and(label==output, label==0).sum()
             not_na_correct += np.logical_and(label==output, label!=0).sum()
-            sys.stdout.write("dev:epoch:%d, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, tot_correct/tot, na_correct/tot, not_na_correct/tot))
+            sys.stdout.write("dev:epoch:%d, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, tot_correct/tot, na_correct/tot_na, not_na_correct/tot_not_na))
             sys.stdout.flush()
         print("")
         eval(logits, labels)
@@ -187,15 +202,16 @@ if __name__ == "__main__":
     # train
     train_dataloader = Dataloader("train")
     dev_dataloader = Dataloader("test")
+    print(train_dataloader.weight)
     model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
     train(model, train_dataloader, dev_dataloader)
 
-    # test
-    if not os.path.exists(Config.save_path):
-        exit("There are not checkpoints to test!")
-    train_dataloader = Dataloader("train")
-    test_dataloader = Dataloader("test")
-    model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
+    # # test
+    # if not os.path.exists(Config.save_path):
+    #     exit("There are not checkpoints to test!")
+    # train_dataloader = Dataloader("train")
+    # test_dataloader = Dataloader("test")
+    # model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
 
 
         

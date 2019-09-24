@@ -32,21 +32,25 @@ class Loss(nn.Module):
         self.softmax = nn.Softmax(dim=1)
     
     def forward(self, text, neg_samples, generated_text, text_latent, knowledge, label):
-        # pdb.set_trace()
-        # kl-loss:
-        text_latent = self.softmax(text_latent)
-        kl_loss = self.kl(text_latent.clamp(min=1e-10).log(), knowledge).sum(0)
+        # ce-loss:
         # ce_loss = self.crossEntropy(text_latent, label)
 
-        # generate-loss:
-        generated_text = self.softmax(generated_text)
-        text = self.softmax(text)
-        neg_samples = self.softmax(neg_samples)
-        pos_generate_loss = self.kl(torch.log(generated_text), torch.log(text)).sum(0)
-        neg_samples = neg_samples.view(text.size()[0], Config.neg_samples, Config.hidden_size)
-        generated_text = generated_text.unsqueeze(1).expand([text.size()[0], Config.neg_samples, Config.hidden_size])
-        neg_generate_loss = self.kl(torch.log(generated_text), torch.log(neg_samples)).sum(0)
+        # # kl-loss:
+        text_latent = self.softmax(text_latent)
+        kl_loss = self.kl(text_latent.clamp(min=1e-10).log(), knowledge).sum(0)
 
-        # return kl_loss + pos_generate_loss - (1.0 / Config.neg_samples) * neg_generate_loss
+        # # generate-loss:
+        # generated_text = self.softmax(generated_text)
+        # text = self.softmax(text)
+        # neg_samples = self.softmax(neg_samples)
+        # pos_generate_loss = self.kl(generated_text.clamp(min=1e-10).log(), text).sum(0)
+        # neg_samples = neg_samples.view(text.size()[0], Config.neg_samples, Config.hidden_size)
+        # generated_text = generated_text.unsqueeze(1).expand([text.size()[0], Config.neg_samples, Config.hidden_size])
+        # neg_generate_loss = self.kl(generated_text.clamp(min=1e-10).log(), neg_samples).sum(0)
+
+        # return kl_loss + pos_generate_loss - (1/Config.neg_samples) * neg_generate_loss
+        # return kl_loss + pos_generate_loss
+        # return ce_loss
         return kl_loss
+        
         
