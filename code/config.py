@@ -15,6 +15,7 @@ class Config():
     neg_samples = 5 
     batch_size = 160
     hidden_size = 256
-    lr = 0.5
+    lr = 1e-3
     max_epoch = 100
     dev_step = 5
+    dropout = 0.5

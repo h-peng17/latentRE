@@ -3,6 +3,7 @@ model
 """
 import torch
 import torch.nn as nn 
+import pdb 
 from config import Config
 from textRepre import TextRepre
 from latent import Loss, EncoderDecoder
@@ -24,6 +25,7 @@ class LatentRE(nn.Module):
         self.label = None
     
     def forward(self):
+        # pdb.set_trace()
         text, entity_info = self.textRepre(self.pos_word, self.pos_pos1, self.pos_pos2, self.mask)
         neg_samples = self.textRepre(self.neg_word.view(-1, Config.sen_len), 
                                         self.neg_pos1.view(-1, Config.sen_len),
@@ -31,3 +33,8 @@ class LatentRE(nn.Module):
         text_latent, generated_text = self.encoderDecoder(text, entity_info)
         loss = self.loss(text, neg_samples, generated_text, text_latent, self.knowledge, self.label)
         return loss, torch.argmax(text_latent, 1)
+    
+    def test(self):
+        text = self.textRepre(self.pos_word, self.pos_pos1, self.pos_pos2)
+        text_latent = self.encoderDecoder(text)
+        return text_latent, torch.argmax(text_latent, 1)

@@ -12,12 +12,16 @@ class EncoderDecoder(nn.Module):
         super(EncoderDecoder, self).__init__()
         self.encoder = MLP(hidden_size, rel_num, hidden_size)
         self.decoder = MLP(rel_num+hidden_size, hidden_size, hidden_size)
+        self.softmax = nn.Softmax(dim=1)
     
-    def forward(self, text, entity_info):
+    def forward(self, text, entity_info=None):
         text_latent = self.encoder(text)
-        latent = torch.cat((entity_info, text_latent), dim=1)
-        generated_text = self.decoder(latent)
-        return text_latent, generated_text
+        if entity_info is None:
+            return self.softmax(text_latent)
+        else:
+            latent = torch.cat((entity_info, text_latent), dim=1)
+            generated_text = self.decoder(latent)
+            return text_latent, generated_text
 
 
 class Loss(nn.Module):
@@ -31,8 +35,8 @@ class Loss(nn.Module):
         # pdb.set_trace()
         # kl-loss:
         text_latent = self.softmax(text_latent)
-        # kl_loss = self.kl(text_latent.log(), knowledge).sum(0)
-        ce_loss = self.crossEntropy(text_latent, label)
+        kl_loss = self.kl(text_latent.clamp(min=1e-10).log(), knowledge).sum(0)
+        # ce_loss = self.crossEntropy(text_latent, label)
 
         # generate-loss:
         generated_text = self.softmax(generated_text)
@@ -44,5 +48,5 @@ class Loss(nn.Module):
         neg_generate_loss = self.kl(torch.log(generated_text), torch.log(neg_samples)).sum(0)
 
         # return kl_loss + pos_generate_loss - (1.0 / Config.neg_samples) * neg_generate_loss
-        return ce_loss
+        return kl_loss
         

@@ -4,6 +4,7 @@ This file contains many useful neural networks.
 import torch
 import torch.nn as nn
 import pdb
+from config import Config
 
 class MLP(nn.Module):
     '''
@@ -34,6 +35,7 @@ class CNN(nn.Module):
             nn.Conv1d(in_channels=input_size, out_channels=hidden_size, kernel_size=3, padding=1),
             nn.ReLU(),
         ]
+        self.dropout = nn.Dropout(Config.dropout)
         self.net = nn.Sequential(*self.modules)
 
     def maxPooling(self, x):
@@ -44,7 +46,7 @@ class CNN(nn.Module):
         return text
     
     def forward(self, input):
-        return self.maxPooling(self.net(input))
+        return self.dropout(self.maxPooling(self.net(input)))
 
 class RNN(nn.Module):
     '''
