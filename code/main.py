@@ -24,13 +24,9 @@ def eval(logit, label):
     res_list = []
     tot = 0
     for i in range(len(logit)):
-        if label[i] != 0:
-            tot += 1
         for j in range(1, len(logit[i])):
-            flag = 0
-            if j == label[i]:
-                flag = 1
-            res_list.append([logit[i][j], flag])
+            tot += label[i][j]
+            res_list.append([logit[i][j], label[i][j]])
             
     #sort res_list
     res_list.sort(key=lambda val: val[0], reverse=True)
@@ -45,7 +41,7 @@ def eval(logit, label):
     # pdb.set_trace()
     f1 = (2*precision*recall / (recall+precision+1e-20)).max()
     auc = sklearn.metrics.auc(x=recall, y=precision)
-    print("auc = "+str(auc)+"| "+"F1 = "+str(f1))
+    print(Config.loss_func + "  auc = "+str(auc)+"| "+"F1 = "+str(f1))
     print('P@100: {} | P@200: {} | P@300: {} | Mean: {}'.format(precision[100], precision[200], precision[300], (precision[100] + precision[200] + precision[300]) / 3))
     
     plt.plot(recall, precision, lw=2, label="model")
@@ -56,7 +52,7 @@ def eval(logit, label):
     plt.title('Precision-Recall')
     plt.legend(loc="upper right")
     plt.grid(True)
-    plt.savefig(os.path.join(Config.save_path, 'pr_curve'))
+    plt.savefig(os.path.join(Config.save_path, 'pr_curve_' + Config.loss_func))
 
     
 
@@ -73,13 +69,14 @@ def train(model, train_dataloader, dev_dataloader=None):
     for i in range(Config.max_epoch):
         # set train data
         # pdb.set_trace()
+        Config.training = True
         tot = 0
         tot_na = 0
         tot_not_na = 0
         tot_correct = 0
         na_correct = 0
         not_na_correct = 0
-        for j in range(int(train_dataloader.instance_tot / Config.batch_size)):
+        for j in range(int(train_dataloader.entpair_tot / Config.batch_size)):
             batch_data = train_dataloader.next_batch()
             model.pos_word = to_tensor(batch_data["pos_word"])
             model.pos_pos1 = to_tensor(batch_data["pos_pos1"])
@@ -87,9 +84,10 @@ def train(model, train_dataloader, dev_dataloader=None):
             model.neg_word = to_tensor(batch_data["neg_word"])
             model.neg_pos1 = to_tensor(batch_data["neg_pos1"])
             model.neg_pos2 = to_tensor(batch_data["neg_pos2"])
-            model.label = to_tensor(batch_data["label"])
             model.mask = torch.from_numpy(batch_data["mask"]).to(torch.float32).cuda()
             model.knowledge = torch.from_numpy(batch_data["knowledge"]).to(torch.float32).cuda()
+            model.bag_knowledge = torch.from_numpy(batch_data["bag_knowledge"]).to(torch.float32).cuda()
+            model.scope = batch_data["scope"]
             label = batch_data["label"]
             # train 
             optimizer.zero_grad()
@@ -110,6 +108,7 @@ def train(model, train_dataloader, dev_dataloader=None):
         
         if i % Config.dev_step == 0:
             print("begin deving...")
+            Config.training = False
             model.eval()
             logits = []
             labels = []
@@ -119,16 +118,17 @@ def train(model, train_dataloader, dev_dataloader=None):
             tot_correct = 0
             na_correct = 0
             not_na_correct = 0
-            for j in range(int(dev_dataloader.instance_tot / Config.batch_size)):
+            for j in range(int(dev_dataloader.entpair_tot / Config.batch_size)):
                 batch_data = dev_dataloader.next_batch()
                 model.pos_word = to_tensor(batch_data["pos_word"])
                 model.pos_pos1 = to_tensor(batch_data["pos_pos1"])
                 model.pos_pos2 = to_tensor(batch_data["pos_pos2"])
-                model.label = to_tensor(batch_data["label"])
+                model.scope = batch_data["scope"]
                 label = batch_data["label"]
+                multi_label = batch_data["multi_label"]
                 logit, output = model.test()
                 logits.extend(logit.cpu().detach().numpy().tolist())
-                labels.extend(label.tolist())
+                labels.extend(multi_label.tolist())
                 output = output.cpu().detach().numpy()
                 tot += label.shape[0]
                 tot_na += (label==0).sum()
@@ -150,6 +150,7 @@ def train(model, train_dataloader, dev_dataloader=None):
 def test(model, test_dataloader):
     model.cuda()
     print("begin testing...")
+    Config.training = False
     for i in range(Config.max_epoch):
         if not os.path.exists(os.path.join(Config.save_path, "ckpt"+str(i))):
             continue
@@ -163,16 +164,17 @@ def test(model, test_dataloader):
         tot_correct = 0
         na_correct = 0
         not_na_correct = 0
-        for j in range(int(test_dataloader.instance_tot / Config.batch_size)):
+        for j in range(int(test_dataloader.entpair_tot / Config.batch_size)):
             batch_data = test_dataloader.next_batch()
             model.pos_word = to_tensor(batch_data["pos_word"])
             model.pos_pos1 = to_tensor(batch_data["pos_pos1"])
             model.pos_pos2 = to_tensor(batch_data["pos_pos2"])
-            model.label = to_tensor(batch_data["label"])
+            model.scope = batch_data["scope"]
             label = batch_data["label"]
+            multi_label = batch_data["multi_label"]
             logit, output = model.test()
             logits.append(logit.cpu().detach().numpy().tolist())
-            labels.append(label.tolist())
+            labels.append(multi_label.tolist())
             output = output.cpu().detach().numpy()
             tot += label.shape[0]
             tot_na += (label==0).sum()
@@ -190,10 +192,14 @@ def test(model, test_dataloader):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="latentRE")
     parser.add_argument("--cuda", dest="cuda", type=str, default="7", help="cuda")
+    parser.add_argument("--loss", dest="loss", type=str, default="ce", help="loss func")
+    parser.add_argument("--neg_samples", dest="neg_samples",type=int, default=0, help="num of neg samples")
     args = parser.parse_args()
     
     # set para
     os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda
+    Config.loss_func = args.loss
+    Config.neg_samples = args.neg_samples
 
     # set save path
     if not os.path.exists(Config.save_path):

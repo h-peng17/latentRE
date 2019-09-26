@@ -4,6 +4,7 @@ This file is to represent the ori text into low dense tensors using dnn
 import torch 
 import torch.nn as nn 
 import numpy as np 
+import pdb
 from config import Config
 from dnn import *
 
@@ -27,7 +28,7 @@ class TextRepre(nn.Module):
         text = self.cnn(embedding.permute(0,2,1))
         if mask is not None:
             mask_embedding = embedding * (mask.unsqueeze(2))
-            entity_info = self.cnn(mask_embedding.permute(0,2,1))
-            return text, entity_info
+            ent_context = self.cnn(mask_embedding.permute(0,2,1))
+            return text, ent_context
         else:
             return text

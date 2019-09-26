@@ -21,3 +21,6 @@ class Config():
     dropout = 0.5
     save_epoch = 5
     save_path = "../ckpt"
+    loss_func = ""
+    training = True
+    down_size = False
