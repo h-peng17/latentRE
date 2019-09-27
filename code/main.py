@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 from model import LatentRE
 from config import Config
 from dataloader import Dataloader
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
 
 def eval(logit, label):
@@ -194,7 +193,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="latentRE")
     parser.add_argument("--cuda", dest="cuda", type=str, default="7", help="cuda")
     parser.add_argument("--loss", dest="loss", type=str, default="ce", help="loss func")
-    parser.add_argument("--neg_samples", dest="neg_samples",type=int, default=0, help="num of neg samples")
+    parser.add_argument("--neg_samples", dest="neg_samples",type=int, default=1, help="num of neg samples")
     args = parser.parse_args()
     
     # set para
@@ -205,6 +204,8 @@ if __name__ == "__main__":
     # set save path
     if not os.path.exists(Config.save_path):
         os.mkdir(Config.save_path)
+    if not os.path.exists("../visualizing/model"):
+        os.mkdir("../visualizing/model")
     
     # train
     train_dataloader = Dataloader("train")

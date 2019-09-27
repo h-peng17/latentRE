@@ -1,6 +1,8 @@
 """
 # This file is all config for model.
 """
+from torch.utils.tensorboard import SummaryWriter
+import os 
 
 class Config():
     """
@@ -24,3 +26,4 @@ class Config():
     loss_func = ""
     training = True
     down_size = False
+    writer = SummaryWriter("../visualizing/model")

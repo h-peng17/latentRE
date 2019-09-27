@@ -24,6 +24,7 @@ class TextRepre(nn.Module):
                                 self.pos2_embedding(pos2)), dim=2)
     
     def forward(self, word, pos1, pos2, mask=None):
+        Config.writer.add_graph(self, (word, pos1, pos2))
         embedding = self.embedding(word, pos1, pos2)
         text = self.cnn(embedding.permute(0,2,1))
         if mask is not None:

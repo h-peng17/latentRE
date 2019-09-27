@@ -22,7 +22,7 @@ class Selector(nn.Module):
                 bag_hidden_mat = x[scope[i][0]:scope[i][1]]
                 instance_logit = self.softmax(self.__logit__(bag_hidden_mat))
                 instance_logit = (instance_logit * knowledge[scope[i][0]:scope[i][1]]).sum(1)
-                j = torch.argmin(instance_logit, 0)
+                j = torch.argmax(instance_logit, 0)
                 bag_repre.append(bag_hidden_mat[j])
             bag_repre = torch.stack(bag_repre)
 
