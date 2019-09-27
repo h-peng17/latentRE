@@ -11,11 +11,11 @@ from selector import Selector
 class Decoder(nn.Module):
     def __init__(self, hidden_size, rel_num):
         super(Decoder, self).__init__()
-        self.decoder = MLP(rel_num+hidden_size, hidden_size, hidden_size)
+        self.decoder = MLP(2 * hidden_size, hidden_size, hidden_size)
         self.softmax = nn.Softmax(dim=1)
     
-    def forward(self, text_latent, ent_context):
-        latent = torch.cat((ent_context, text_latent), dim=1)
+    def forward(self, select_mask, rel_mat, ent_context):
+        latent = torch.cat((torch.matmul(select_mask, rel_mat.transpose(0,1)), ent_context), 1)
         generated_text = self.decoder(latent)
         return generated_text
 

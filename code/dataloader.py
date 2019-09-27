@@ -29,7 +29,8 @@ class Dataloader:
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_neg_samples.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_mask.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")):
+        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")) or \
+        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_select_mask.npy")):
             print("There dones't exist pre-processed data, pre-processing...")
             start_time = time.time()
             data = json.load(open(os.path.join("../data/nyt", mode+".json")))
@@ -82,6 +83,7 @@ class Dataloader:
             self.data_knowledge = np.zeros((self.instance_tot, Config.rel_num), dtype=float)
             self.data_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_neg_samples = np.zeros((self.instance_tot, Config.neg_samples), dtype=int)
+            self.data_select_mask = np.zeros((self.instance_tot, Config.rel_num), dtype=int)
 
             
             def _process_loop(i):
@@ -160,8 +162,10 @@ class Dataloader:
                 for rel in rels:
                     try:
                         self.data_knowledge[i][rel2id[rel]] = 1.0 / len(rels)
+                        self.data_select_mask[i][rel2id[rel]] = 1
                     except:
                         continue
+
 
                 # mask words which are not entities
                 head = instance["head"]["word"].split()
@@ -187,6 +191,7 @@ class Dataloader:
             np.save(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy"), self.data_knowledge)
             np.save(os.path.join("../data/pre_processed_data", "word_vec.npy"), self.word_vec)
             np.save(os.path.join("../data/pre_processed_data", mode+"_mask.npy"), self.data_mask)
+            np.save(os.path.join("../data/pre_processed_data", mode+"_select_mask.npy"), self.data_select_mask)
             json.dump(self.entpair2scope, open(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json"), 'w'))
             print("end pre-process")
             end_time = time.time()
@@ -202,6 +207,7 @@ class Dataloader:
             self.data_knowledge = np.load(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy"))
             self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
             self.data_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_mask.npy"))
+            self.data_select_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_select_mask.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")))
             Config.word_tot = self.word_vec.shape[0] + 2
             Config.rel_num = len(json.load(open(os.path.join("../data/nyt", "rel2id.json"))))
@@ -246,12 +252,14 @@ class Dataloader:
         _length = []
         _scope = []
         _neg_index = []
+        _select_mask = []
         cur_pos = 0
         for i in range(idx0, idx1):
             _word.append(self.data_word[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
             _pos1.append(self.data_pos1[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
             _pos2.append(self.data_pos2[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
             _mask.append(self.data_mask[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
+            _select_mask.append(self.data_select_mask[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
             _knowledge.append(self.data_knowledge[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
             _bag_knowledge.append(self.data_knowledge[self.scope[self.order[i]][0]])
             _neg_index.append(self.data_neg_samples[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
@@ -296,6 +304,7 @@ class Dataloader:
             batch_data['pos_pos1'] = np.concatenate(_pos1)[ins_sample_index]
             batch_data['pos_pos2'] = np.concatenate(_pos2)[ins_sample_index]
             batch_data['mask'] = np.concatenate(_mask)[ins_sample_index]
+            batch_data["select_mask"] = np.concatenate(_select_mask)[ins_sample_index]
             batch_data['length'] = np.concatenate(_length)[ins_sample_index]
             batch_data["knowledge"] = np.concatenate(_knowledge)[ins_sample_index]
             batch_data['label'] = np.stack(_rel)[bag_sample_index]
@@ -316,6 +325,7 @@ class Dataloader:
             batch_data['pos_pos1'] = np.concatenate(_pos1)
             batch_data['pos_pos2'] = np.concatenate(_pos2)
             batch_data['mask'] = np.concatenate(_mask)
+            batch_data["select_mask"] = np.concatenate(_select_mask)
             batch_data['length'] = np.concatenate(_length)
             batch_data["knowledge"] = np.concatenate(_knowledge)
             batch_data['label'] = np.stack(_rel)

@@ -26,7 +26,7 @@ class Loss(nn.Module):
         pos_gen_loss = self.kl(generated_text.clamp(min=1e-10).log(), golden_text).sum(0)
         # neg loss
         neg_samples = neg_samples.view(golden_text.size()[0], Config.neg_samples, Config.hidden_size)
-        generated_text = generated_text.unsqueeze(1).expand([text.size()[0], Config.neg_samples, Config.hidden_size])
+        generated_text = generated_text.unsqueeze(1).expand([golden_text.size()[0], Config.neg_samples, Config.hidden_size])
         neg_gen_loss = self.kl(generated_text.clamp(min=1e-10).log(), neg_samples).sum(0)
         return pos_gen_loss
     

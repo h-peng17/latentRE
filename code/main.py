@@ -64,7 +64,7 @@ def train(model, train_dataloader, dev_dataloader=None):
     model.cuda()
     model.train()
     params = filter(lambda x:x.requires_grad, model.parameters())
-    optimizer = optim.SGD(params, Config.lr)
+    optimizer = optim.Adam(params, Config.lr)
     print("Begin train...")
     for i in range(Config.max_epoch):
         # set train data
@@ -85,6 +85,7 @@ def train(model, train_dataloader, dev_dataloader=None):
             model.neg_pos1 = to_tensor(batch_data["neg_pos1"])
             model.neg_pos2 = to_tensor(batch_data["neg_pos2"])
             model.mask = torch.from_numpy(batch_data["mask"]).to(torch.float32).cuda()
+            model.select_mask = torch.from_numpy(batch_data["select_mask"]).to(torch.float32).cuda()
             model.knowledge = torch.from_numpy(batch_data["knowledge"]).to(torch.float32).cuda()
             model.bag_knowledge = torch.from_numpy(batch_data["bag_knowledge"]).to(torch.float32).cuda()
             model.scope = batch_data["scope"]

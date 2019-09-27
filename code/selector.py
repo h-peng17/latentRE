@@ -26,7 +26,7 @@ class Selector(nn.Module):
                 bag_repre.append(bag_hidden_mat[j])
             bag_repre = torch.stack(bag_repre)
 
-            return self.softmax(self.__logit__(bag_repre))
+            return self.softmax(self.__logit__(bag_repre)), self.rel_mat
         
         else:
             bag_logit = []

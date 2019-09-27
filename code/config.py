@@ -12,10 +12,10 @@ class Config():
     pos_embedding_dim = 5
     sen_len = 120
     pos_num = sen_len * 2
-    neg_samples = 5 
+    neg_samples = 1 
     batch_size = 160
     hidden_size = 230
-    lr = 0.5
+    lr = 1e-3
     max_epoch = 100
     dev_step = 5
     dropout = 0.5
