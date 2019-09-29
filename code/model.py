@@ -26,9 +26,9 @@ class LatentRE(nn.Module):
         self.neg_pos2 = None
         self.mask = None 
         self.knowledge = None
-        self.bag_knowledge = None
-        self.scope = None # numpy
         self.select_mask = None
+        self.scope = None # numpy
+        self.query = None
     
     def forward(self):
         text, ent_context = self.textRepre(self.pos_word, self.pos_pos1, self.pos_pos2, self.mask)
@@ -37,9 +37,14 @@ class LatentRE(nn.Module):
                                             self.neg_pos2.view(-1, Config.sen_len))
         logit, rel_mat = self.selector(text, self.scope, self.knowledge)
         generated_text = self.decoder(self.select_mask, rel_mat, ent_context)
-        rel_pre_loss = self.loss.rel_pre_loss(logit, self.bag_knowledge)
+        rel_pre_loss = self.loss.rel_pre_loss(logit, self.knowledge)
         gen_loss = self.loss.gen_loss(text, neg_samples, generated_text)
-        return rel_pre_loss + gen_loss, torch.argmax(logit, 1)
+        
+        # # ce loss
+        # text = self.textRepre(self.pos_word, self.pos_pos1, self.pos_pos2)
+        # logit, rel_mat = self.selector(text, self.scope, self.query)
+        # rel_pre_loss = self.loss.ce_loss(logit, self.query)
+        return rel_pre_loss, torch.argmax(logit, 1)
     
     def test(self):
         text = self.textRepre(self.pos_word, self.pos_pos1, self.pos_pos2)

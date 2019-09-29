@@ -11,12 +11,25 @@ import sklearn.metrics
 import matplotlib
 import pdb
 import numpy as np 
+import time
 # Use 'Agg' so this program could run on a remote server
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from model import LatentRE
 from config import Config
 from dataloader import Dataloader
+
+def log(auc, step):
+    if not os.path.exists("../res"):
+        os.mkdir("../res")
+    f = open(os.path.join("../res", "result"), 'a+')
+    res = "AUC:{},\tepoch:{},\tlr:{}\n".format(auc, step, Config.lr)
+    f.write(time.asctime(time.localtime(time.time()))+"\n")
+    f.write(Config.info+"\n")
+    f.write(res)
+    f.write("---------------------------------------------------------------------------------------------------\n")
+    f.close()
+
 
 
 def eval(logit, label):
@@ -40,7 +53,7 @@ def eval(logit, label):
     # pdb.set_trace()
     f1 = (2*precision*recall / (recall+precision+1e-20)).max()
     auc = sklearn.metrics.auc(x=recall, y=precision)
-    print(Config.loss_func + "  auc = "+str(auc)+"| "+"F1 = "+str(f1))
+    print("auc = "+str(auc)+"| "+"F1 = "+str(f1))
     print('P@100: {} | P@200: {} | P@300: {} | Mean: {}'.format(precision[100], precision[200], precision[300], (precision[100] + precision[200] + precision[300]) / 3))
     
     plt.plot(recall, precision, lw=2, label="model")
@@ -53,6 +66,8 @@ def eval(logit, label):
     plt.grid(True)
     plt.savefig(os.path.join(Config.save_path, 'pr_curve_' + Config.loss_func))
 
+    return auc
+
     
 
 
@@ -61,13 +76,15 @@ def to_tensor(array):
 
 def train(model, train_dataloader, dev_dataloader=None):
     model.cuda()
-    model.train()
     params = filter(lambda x:x.requires_grad, model.parameters())
     optimizer = optim.Adam(params, Config.lr)
     print("Begin train...")
+    best_auc = 0
+    best_epoch = 0
     for i in range(Config.max_epoch):
         # set train data
         # pdb.set_trace()
+        model.train()
         Config.training = True
         tot = 0
         tot_na = 0
@@ -86,8 +103,8 @@ def train(model, train_dataloader, dev_dataloader=None):
             model.mask = torch.from_numpy(batch_data["mask"]).to(torch.float32).cuda()
             model.select_mask = torch.from_numpy(batch_data["select_mask"]).to(torch.float32).cuda()
             model.knowledge = torch.from_numpy(batch_data["knowledge"]).to(torch.float32).cuda()
-            model.bag_knowledge = torch.from_numpy(batch_data["bag_knowledge"]).to(torch.float32).cuda()
             model.scope = batch_data["scope"]
+            model.query = to_tensor(batch_data["label"])
             label = batch_data["label"]
             # train 
             optimizer.zero_grad()
@@ -108,8 +125,8 @@ def train(model, train_dataloader, dev_dataloader=None):
         
         if i % Config.dev_step == 0:
             print("begin deving...")
-            Config.training = False
             model.eval()
+            Config.training = False
             logits = []
             labels = []
             tot = 0
@@ -139,10 +156,12 @@ def train(model, train_dataloader, dev_dataloader=None):
                 sys.stdout.write("dev:epoch:%d, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, tot_correct/tot, na_correct/tot_na, not_na_correct/tot_not_na))
                 sys.stdout.flush()
             print("")
-            eval(logits, labels)
-            print("---------------------------------------------------------------------------------------------------")
-            model.train()
-        
+            _auc = eval(logits, labels)
+            if _auc > best_auc:
+                best_auc = _auc
+                best_epoch = i
+            print("---------------------------------------------------------------------------------------------------")    
+    log(best_auc, best_epoch) 
         # if i % Config.save_epoch == 0:
             # torch.save(model.state_dict(), os.path.join(Config.save_path, "ckpt"+str(i)))
 
@@ -191,25 +210,27 @@ def test(model, test_dataloader):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="latentRE")
-    parser.add_argument("--cuda", dest="cuda", type=str, default="7", help="cuda")
+    parser.add_argument("--cuda", dest="cuda", type=str, default="4", help="cuda")
     parser.add_argument("--loss", dest="loss", type=str, default="ce", help="loss func")
     parser.add_argument("--neg_samples", dest="neg_samples",type=int, default=1, help="num of neg samples")
+    parser.add_argument("--info", dest="info",type=str, default="", help="info for model")
     args = parser.parse_args()
     
     # set para
     os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda
     Config.loss_func = args.loss
     Config.neg_samples = args.neg_samples
+    Config.info = args.info
 
     # set save path
     if not os.path.exists(Config.save_path):
         os.mkdir(Config.save_path)
-    if not os.path.exists("../visualizing/model"):
-        os.mkdir("../visualizing/model")
+    if not os.path.exists("../visualizing"):
+        os.mkdir("../visualizing")
     
     # train
-    train_dataloader = Dataloader("train")
-    dev_dataloader = Dataloader("test")
+    train_dataloader = Dataloader("train", "ins")
+    dev_dataloader = Dataloader("test", "entpair")
     print(train_dataloader.weight)
     model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
     train(model, train_dataloader, dev_dataloader)

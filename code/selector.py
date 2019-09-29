@@ -15,25 +15,29 @@ class Selector(nn.Module):
     def __logit__(self, x):
         return torch.matmul(x, self.rel_mat) + self.bias
     
-    def forward(self, x, scope, knowledge=None):
+    def forward(self, x, scope, query = None, knowledge=None):
         if Config.training:
-            bag_repre = []
-            for i in range(scope.shape[0]):
-                bag_hidden_mat = x[scope[i][0]:scope[i][1]]
-                instance_logit = self.softmax(self.__logit__(bag_hidden_mat))
-                instance_logit = (instance_logit * knowledge[scope[i][0]:scope[i][1]]).sum(1)
-                j = torch.argmax(instance_logit, 0)
-                bag_repre.append(bag_hidden_mat[j])
-            bag_repre = torch.stack(bag_repre)
-
-            return self.softmax(self.__logit__(bag_repre)), self.rel_mat
-        
+            if Config.train_bag:
+                bag_repre = []
+                for i in range(scope.shape[0]):
+                    bag_hidden_mat = x[scope[i][0]:scope[i][1]]
+                    instance_logit = self.softmax(self.__logit__(bag_hidden_mat))
+                    j = torch.argmax(instance_logit[:, query[i]])
+                    bag_repre.append(bag_hidden_mat[j])
+                bag_repre = torch.stack(bag_repre)
+                return self.__logit__(bag_repre), self.rel_mat
+            else:
+                return self.softmax(self.__logit__(x)), self.rel_mat     
         else:
-            bag_logit = []
-            for i in range(scope.shape[0]):
-                bag_hidden_mat = x[scope[i][0]:scope[i][1]]
-                instance_logit = self.softmax(self.__logit__(bag_hidden_mat))
-                _bag_logit, _ = torch.max(instance_logit, 0)
-                bag_logit.append(_bag_logit)
-            bag_logit = torch.stack(bag_logit)
-            return bag_logit
+            if Config.eval_bag:
+                bag_logit = []
+                for i in range(scope.shape[0]):
+                    bag_hidden_mat = x[scope[i][0]:scope[i][1]]
+                    instance_logit = self.softmax(self.__logit__(bag_hidden_mat))
+                    _bag_logit, _ = torch.max(instance_logit, 0)
+                    bag_logit.append(_bag_logit)
+                bag_logit = torch.stack(bag_logit)
+                return bag_logit
+            else:
+                return self.softmax(self.__logit__(x))
+                

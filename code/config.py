@@ -1,7 +1,7 @@
 """
 # This file is all config for model.
 """
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 import os 
 
 class Config():
@@ -18,7 +18,7 @@ class Config():
     batch_size = 160
     hidden_size = 230
     lr = 1e-3
-    max_epoch = 100
+    max_epoch = 60
     dev_step = 5
     dropout = 0.5
     save_epoch = 5
@@ -26,4 +26,7 @@ class Config():
     loss_func = ""
     training = True
     down_size = False
-    writer = SummaryWriter("../visualizing/model")
+    train_bag = False
+    eval_bag = True
+    info = ""
+    # writer = SummaryWriter("../visualizing/model")

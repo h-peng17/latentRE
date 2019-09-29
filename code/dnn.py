@@ -14,8 +14,15 @@ class MLP(nn.Module):
     '''
     def __init__(self, input_size, output_size, hidden_size):
         super(MLP, self).__init__()
-        self.net = nn.Linear(input_size, output_size)
-        nn.init.xavier_uniform_(self.net.weight.data)
+        self.modules = [
+            nn.Linear(input_size, hidden_size * 2),
+            nn.ReLU(),
+            nn.Linear(hidden_size * 2, hidden_size * 2),
+            nn.ReLU(),
+            nn.Linear(hidden_size * 2, output_size),
+            nn.ReLU(),
+        ]
+        self.net = nn.Sequential(*self.modules)
 
     def forward(self, input):
         return self.net(input)

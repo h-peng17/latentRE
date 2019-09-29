@@ -12,6 +12,10 @@ class Loss(nn.Module):
         self.crossEntropy = nn.CrossEntropyLoss(weight=torch.from_numpy(weight).to(torch.float32))
         self.softmax = nn.Softmax(dim=1)
     
+    def ce_loss(self, logit, label):
+        ce_loss = self.crossEntropy(logit, label)
+        return ce_loss
+
     def rel_pre_loss(self, logit, knowledge):
         # kl-loss:
         kl_loss = self.kl(logit.clamp(min=1e-10).log(), knowledge).sum(0)
