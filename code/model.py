@@ -31,19 +31,19 @@ class LatentRE(nn.Module):
         self.query = None
     
     def forward(self):
-        text, ent_context = self.textRepre(self.pos_word, self.pos_pos1, self.pos_pos2, self.mask)
-        neg_samples = self.textRepre(self.neg_word.view(-1, Config.sen_len), 
-                                        self.neg_pos1.view(-1, Config.sen_len),
-                                            self.neg_pos2.view(-1, Config.sen_len))
-        logit, rel_mat = self.selector(text, self.scope, self.knowledge)
-        generated_text = self.decoder(self.select_mask, rel_mat, ent_context)
-        rel_pre_loss = self.loss.rel_pre_loss(logit, self.knowledge)
-        gen_loss = self.loss.gen_loss(text, neg_samples, generated_text)
+        # text, ent_context = self.textRepre(self.pos_word, self.pos_pos1, self.pos_pos2, self.mask)
+        # neg_samples = self.textRepre(self.neg_word.view(-1, Config.sen_len), 
+        #                                 self.neg_pos1.view(-1, Config.sen_len),
+        #                                     self.neg_pos2.view(-1, Config.sen_len))
+        # logit, rel_mat = self.selector(text, self.scope, self.knowledge)
+        # generated_text = self.decoder(self.select_mask, rel_mat, ent_context)
+        # rel_pre_loss = self.loss.rel_pre_loss(logit, self.knowledge)
+        # gen_loss = self.loss.gen_loss(text, neg_samples, generated_text)
         
-        # # ce loss
-        # text = self.textRepre(self.pos_word, self.pos_pos1, self.pos_pos2)
-        # logit, rel_mat = self.selector(text, self.scope, self.query)
-        # rel_pre_loss = self.loss.ce_loss(logit, self.query)
+        # ce loss
+        text = self.textRepre(self.pos_word, self.pos_pos1, self.pos_pos2)
+        logit, rel_mat = self.selector(text, self.scope, self.query)
+        rel_pre_loss = self.loss.ce_loss(logit, self.query)
         return rel_pre_loss, torch.argmax(logit, 1)
     
     def test(self):

@@ -27,7 +27,7 @@ class Selector(nn.Module):
                 bag_repre = torch.stack(bag_repre)
                 return self.__logit__(bag_repre), self.rel_mat
             else:
-                return self.softmax(self.__logit__(x)), self.rel_mat     
+                return self.__logit__(x), self.rel_mat     
         else:
             if Config.eval_bag:
                 bag_logit = []
