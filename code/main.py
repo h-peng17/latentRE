@@ -12,9 +12,11 @@ import matplotlib
 import pdb
 import numpy as np 
 import time
+from apex import amp
 # Use 'Agg' so this program could run on a remote server
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from transformers import AdamW, WarmupLinearSchedule
 from model import LatentRE
 from config import Config
 from dataloader import Dataloader
@@ -68,22 +70,39 @@ def eval(logit, label):
 
     return auc
 
-    
-
-
-def to_tensor(array):
+def to_int_tensor(array):
     return torch.from_numpy(array).to(torch.int64).cuda()
+
+def to_float_tensor(array):
+    return torch.from_numpy(array).to(torch.float32).cuda()
 
 def train(model, train_dataloader, dev_dataloader=None):
     model.cuda()
-    params = filter(lambda x:x.requires_grad, model.parameters())
-    optimizer = optim.Adam(params, Config.lr)
+    # params = filter(lambda x:x.requires_grad, model.parameters())
+    # Prepare optimizer and schedule (linear warmup and decay)
+    t_total = train_dataloader.instance_tot // Config.batch_size // Config.gradient_accumulation_steps * Config.max_epoch
+
+    no_decay = ['bias', 'LayerNorm.weight']
+    optimizer_grouped_parameters = [
+        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': Config.weight_decay},
+        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+        ]
+    optimizer = AdamW(optimizer_grouped_parameters, lr=Config.lr, eps=Config.adam_epsilon)
+    scheduler = WarmupLinearSchedule(optimizer, warmup_steps=Config.warmup_steps, t_total=t_total)
+
+    # amp training 
+    model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
+
+    # Data parallel
+    model = nn.DataParallel(model)
+    model.zero_grad()
+    
     print("Begin train...")
+    print("We will train model in %d steps"%(train_dataloader.entpair_tot//Config.batch_size//Config.gradient_accumulation_steps*Config.max_epoch))
     best_auc = 0
     best_epoch = 0
+    global_step = 0
     for i in range(Config.max_epoch):
-        # set train data
-        # pdb.set_trace()
         model.train()
         Config.training = True
         tot = 0
@@ -93,34 +112,41 @@ def train(model, train_dataloader, dev_dataloader=None):
         na_correct = 0
         not_na_correct = 0
         for j in range(int(train_dataloader.entpair_tot / Config.batch_size)):
-            batch_data = train_dataloader.next_batch()
-            model.pos_word = to_tensor(batch_data["pos_word"])
-            model.pos_pos1 = to_tensor(batch_data["pos_pos1"])
-            model.pos_pos2 = to_tensor(batch_data["pos_pos2"])
-            # model.neg_word = to_tensor(batch_data["neg_word"])
-            # model.neg_pos1 = to_tensor(batch_data["neg_pos1"])
-            # model.neg_pos2 = to_tensor(batch_data["neg_pos2"])
-            # model.mask = torch.from_numpy(batch_data["mask"]).to(torch.float32).cuda()
-            # model.select_mask = torch.from_numpy(batch_data["select_mask"]).to(torch.float32).cuda()
-            # model.knowledge = torch.from_numpy(batch_data["knowledge"]).to(torch.float32).cuda()
-            # model.scope = batch_data["scope"]
-            model.query = to_tensor(batch_data["label"])
+            batch_data = train_dataloader.next_batch()            
+            inputs = {
+                'pos_word':to_int_tensor(batch_data['pos_word']),
+                'pos_pos1':to_int_tensor(batch_data['pos_pos1']),
+                'pos_pos2':to_int_tensor(batch_data['pos_pos2']),
+                'knowledge':to_float_tensor(batch_data['knowledge']),
+                'input_ids':to_int_tensor(batch_data['input_ids']),
+                'attention_mask':to_int_tensor(batch_data['attention_mask'])
+            }
             label = batch_data["label"]
-            # train 
-            optimizer.zero_grad()
-            loss, output = model()
-            loss.backward()
-            optimizer.step()
-            # gen res
-            output = output.cpu().detach().numpy()
-            tot += label.shape[0]
-            tot_na += (label==0).sum()
-            tot_not_na += (label!=0).sum()
-            tot_correct += (label==output).sum()
-            na_correct +=np.logical_and(label==output, label==0).sum()
-            not_na_correct += np.logical_and(label==output, label!=0).sum()
-            sys.stdout.write("train:epoch:%d, loss:%.3f, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, loss, tot_correct/tot, na_correct/tot_na, not_na_correct/tot_not_na))
-            sys.stdout.flush()
+            
+            loss = model(**inputs)
+            loss = loss.mean()
+            loss = loss / Config.gradient_accumulation_steps
+            with amp.scale_loss(loss, optimizer) as scaled_loss:
+                scaled_loss.backward()
+            nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
+            
+            # compute acc 
+            # output = output.cpu().detach().numpy()
+            # tot += label.shape[0]
+            # tot_na += (label==0).sum()
+            # tot_not_na += (label!=0).sum()
+            # tot_correct += (label==output).sum()
+            # na_correct +=np.logical_and(label==output, label==0).sum()
+            # not_na_correct += np.logical_and(label==output, label!=0).sum()
+            
+            if (j+1) % Config.gradient_accumulation_steps == 0:
+                optimizer.step()
+                scheduler.step()
+                model.zero_grad()
+                global_step += 1
+                # sys.stdout.write("train:epoch:%d, loss:%.3f, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, loss, tot_correct/tot, na_correct/tot_na, not_na_correct/tot_not_na))
+                sys.stdout.write("train:epoch:%d, global_step:%d, loss:%.3f\r"%(i, global_step, loss))
+                sys.stdout.flush()
         print("")
         
         if i % Config.dev_step == 0:
@@ -137,13 +163,18 @@ def train(model, train_dataloader, dev_dataloader=None):
             not_na_correct = 0
             for j in range(int(dev_dataloader.entpair_tot / Config.batch_size)):
                 batch_data = dev_dataloader.next_batch()
-                model.pos_word = to_tensor(batch_data["pos_word"])
-                model.pos_pos1 = to_tensor(batch_data["pos_pos1"])
-                model.pos_pos2 = to_tensor(batch_data["pos_pos2"])
-                model.scope = batch_data["scope"]
+                inputs = {
+                    'pos_word':to_int_tensor(batch_data['pos_word']),
+                    'pos_pos1':to_int_tensor(batch_data['pos_pos1']),
+                    'pos_pos2':to_int_tensor(batch_data['pos_pos2']),
+                    'scope':batch_data['scope']
+                }
+                                
                 label = batch_data["label"]
                 multi_label = batch_data["multi_label"]
-                logit, output = model.test()
+                
+                # compute auc 
+                logit, output = model(**inputs)
                 logits.extend(logit.cpu().detach().numpy().tolist())
                 labels.extend(multi_label.tolist())
                 output = output.cpu().detach().numpy()
@@ -185,13 +216,16 @@ def test(model, test_dataloader):
         not_na_correct = 0
         for j in range(int(test_dataloader.entpair_tot / Config.batch_size)):
             batch_data = test_dataloader.next_batch()
-            model.pos_word = to_tensor(batch_data["pos_word"])
-            model.pos_pos1 = to_tensor(batch_data["pos_pos1"])
-            model.pos_pos2 = to_tensor(batch_data["pos_pos2"])
-            model.scope = batch_data["scope"]
+            inputs = {
+                'pos_word':to_int_tensor(batch_data['pos_word']),
+                'pos_pos1':to_int_tensor(batch_data['pos_pos1']),
+                'pos_pos2':to_int_tensor(batch_data['pos_pos2']),
+                'scope':batch_data['scope']
+            }
             label = batch_data["label"]
             multi_label = batch_data["multi_label"]
-            logit, output = model.test()
+            
+            logit, output = model(**input)
             logits.append(logit.cpu().detach().numpy().tolist())
             labels.append(multi_label.tolist())
             output = output.cpu().detach().numpy()

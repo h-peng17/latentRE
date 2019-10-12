@@ -3,7 +3,34 @@ This file is to select a bag repre from a bag
 """
 import torch 
 import torch.nn as nn
+import torch.nn.functional as F 
+from torch.autograd import Variable
 from config import Config
+
+class GumbalSoftmax(nn.Module):
+    def __init__(self):
+        super(GumbalSoftmax, self).__init__()
+
+    def sample_gumbel(self, shape, eps=1e-20):
+        U = torch.rand(shape).cuda()
+        return -Variable(torch.log(-torch.log(U + eps) + eps))
+
+    def gumbel_softmax_sample(self, logits, temperature):
+        y = logits + self.sample_gumbel(logits.size())
+        return F.softmax(y / temperature, -1)
+
+    def forward(self, logits, temperature):
+        """
+        input: [*, n_class]
+        return: [*, n_class] an one-hot vector
+        """
+        y = self.gumbel_softmax_sample(logits, temperature)
+        shape = y.size()
+        _, ind = y.max(dim=-1)
+        y_hard = torch.zeros_like(y).view(-1, shape[-1])
+        y_hard.scatter_(1, ind.view(-1, 1), 1)
+        y_hard = y_hard.view(*shape)
+        return (y_hard - y).detach() + y
 
 class Selector(nn.Module):
     def __init__(self):
@@ -11,6 +38,7 @@ class Selector(nn.Module):
         self.rel_mat = nn.Parameter(torch.randn(Config.hidden_size, Config.rel_num))
         self.bias = nn.Parameter(torch.randn(Config.rel_num))
         self.softmax = nn.Softmax(1)
+        self.gumbal_softmax = GumbalSoftmax()
     
     def __logit__(self, x):
         return torch.matmul(x, self.rel_mat) + self.bias
@@ -25,9 +53,18 @@ class Selector(nn.Module):
                     j = torch.argmax(instance_logit[:, query[i]])
                     bag_repre.append(bag_hidden_mat[j])
                 bag_repre = torch.stack(bag_repre)
-                return self.__logit__(bag_repre), self.rel_mat
+
+                bag_logit = self.__logit__(bag_repre)
+                gumbal_logit = self.gumbal_softmax(bag_logit, Config.gumbal_temperature) 
+                # gumbal_logit  `(batch_size, rel_num)`
+                # rel_mat `(hidden_size, rel_num)`
+                label_info = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
+                return bag_logit, label_info
             else:
-                return self.__logit__(x), self.rel_mat     
+                logit = self.__logit__(x)
+                gumbal_logit = self.gumbal_softmax(logit, Config.gumbal_temperature)
+                label_info = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
+                return logit, label_info
         else:
             if Config.eval_bag:
                 bag_logit = []

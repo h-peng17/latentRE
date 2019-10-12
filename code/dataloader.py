@@ -9,8 +9,10 @@ import numpy as np
 import random
 import pdb
 import time
+from transformers import BertTokenizer
 from config import Config
 import multiprocessing.dummy as mp 
+
 
 
 class Dataloader:
@@ -31,14 +33,19 @@ class Dataloader:
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_mask.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_relfact2scope.json")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_select_mask.npy")):
+        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_select_mask.npy")) or \
+        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_input_ids.npy")) or \
+        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_attention_mask.npy")):
             print("There dones't exist pre-processed data, pre-processing...")
             start_time = time.time()
             data = json.load(open(os.path.join("../data/nyt", mode+".json")))
             knowledge = json.load(open(os.path.join("../data/knowledge",mode+'.json')))
             ori_word_vec = json.load(open(os.path.join("../data/nyt","word_vec.json")))
             Config.word_tot = len(ori_word_vec) + 2
-            
+
+            # Bert tokenizer
+            tokenizer = BertTokenizer.from_pretrained(Config.model_name_or_path, do_lower_case=True)
+
             # process word vec
             word2id = {}
             word2id["blk"] = 0
@@ -95,8 +102,9 @@ class Dataloader:
             self.data_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_neg_samples = np.zeros((self.instance_tot, Config.neg_samples), dtype=int)
             self.data_select_mask = np.zeros((self.instance_tot, Config.rel_num), dtype=float)
+            self.data_input_ids = np.zeros((self.instance_tot, Config.max_seq_length), dtype=int) - 1
+            self.data_attention_mask = np.zeros((self.instance_tot, Config.max_seq_length), dtype=int)
 
-            
             def _process_loop(i):
                 # for i, instance in enumerate(data):
                 instance = data[i]
@@ -161,6 +169,13 @@ class Dataloader:
                     self.data_label[i] = rel2id[instance["relation"]]
                 except:
                     self.data_label[i] = 0
+                
+                # input ids for bert
+                length = min(len(words), Config.max_seq_length)
+                self.data_input_ids[i][0:length] = tokenizer.encode(sentence, max_length=Config.max_seq_length, add_special_tokens=True)[0:length]
+                self.data_attention_mask[i][0:length] = 1
+
+
                 # negative sample for train
                 entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
                 pos = entities_pos_dict[entities]
@@ -211,6 +226,8 @@ class Dataloader:
             np.save(os.path.join("../data/pre_processed_data", "word_vec.npy"), self.word_vec)
             np.save(os.path.join("../data/pre_processed_data", mode+"_mask.npy"), self.data_mask)
             np.save(os.path.join("../data/pre_processed_data", mode+"_select_mask.npy"), self.data_select_mask)
+            np.save(os.path.join("../data/pre_processed_data", mode+"_input_ids.npy"), self.data_input_ids)
+            np.save(os.path.join("../data/pre_processed_data", mode+"_attention_mask.npy"), self.data_attention_mask)
             json.dump(self.entpair2scope, open(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json"), 'w'))
             json.dump(self.relfact2scope, open(os.path.join("../data/pre_processed_data", mode+"_relfact2scope.json"), "w"))
             print("end pre-process")
@@ -228,6 +245,8 @@ class Dataloader:
             self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
             self.data_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_mask.npy"))
             self.data_select_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_select_mask.npy"))
+            self.data_input_ids = np.load(os.path.join("../data/pre_processed_data", mode+"_input_ids.npy"))
+            self.data_attention_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_attention_mask.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")))
             self.relfact2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_relfact2scope.json")))
             Config.word_tot = self.word_vec.shape[0] + 2
@@ -280,6 +299,8 @@ class Dataloader:
             batch_data["mask"] = self.data_mask[index]
             batch_data["knowledge"] = self.data_knowledge[index]
             batch_data["select_mask"] = self.data_select_mask[index]
+            batch_data["input_ids"] = self.data_input_ids[index]
+            batch_data["attention_mask"] = self.data_attention_mask[index]
             # neg sample (batch_size, neg_samples, sen_len)
             neg_indexes = self.data_neg_samples[index]
             neg_samples = Config.neg_samples

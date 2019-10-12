@@ -15,9 +15,8 @@ class Config():
     sen_len = 120
     pos_num = sen_len * 2
     neg_samples = 1 
-    batch_size = 160
-    hidden_size = 230
-    lr = 1e-3
+    batch_size = 8
+    hidden_size = 256
     max_epoch = 60
     dev_step = 5
     dropout = 0.5
@@ -29,4 +28,18 @@ class Config():
     train_bag = False
     eval_bag = True
     info = ""
-    # writer = SummaryWriter("../visualizing/model")
+
+    # bert
+    max_seq_length = 384
+    model_type = 'bert'
+    model_name_or_path = "bert-base-uncased"
+    gumbal_temperature = 0.5
+    
+
+    # optimize
+    lr = 3e-5
+    weight_decay = 0.0
+    adam_epsilon = 1e-8
+    gradient_accumulation_steps = 4
+    max_grad_norm = 1
+    warmup_steps = 0
