@@ -102,8 +102,8 @@ class Dataloader:
             self.data_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_neg_samples = np.zeros((self.instance_tot, Config.neg_samples), dtype=int)
             self.data_select_mask = np.zeros((self.instance_tot, Config.rel_num), dtype=float)
-            self.data_input_ids = np.zeros((self.instance_tot, Config.max_seq_length), dtype=int) - 1
-            self.data_attention_mask = np.zeros((self.instance_tot, Config.max_seq_length), dtype=int)
+            self.data_input_ids = np.zeros((self.instance_tot, Config.sen_len), dtype=int) - 1
+            self.data_attention_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
 
             def _process_loop(i):
                 # for i, instance in enumerate(data):
@@ -171,8 +171,8 @@ class Dataloader:
                     self.data_label[i] = 0
                 
                 # input ids for bert
-                length = min(len(words), Config.max_seq_length)
-                self.data_input_ids[i][0:length] = tokenizer.encode(sentence, max_length=Config.max_seq_length, add_special_tokens=True)[0:length]
+                length = min(len(words), Config.sen_len)
+                self.data_input_ids[i][0:length] = tokenizer.encode(sentence, max_length=Config.sen_len, add_special_tokens=True)[0:length]
                 self.data_attention_mask[i][0:length] = 1
 
 

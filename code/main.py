@@ -94,8 +94,8 @@ def train(model, train_dataloader, dev_dataloader=None):
     model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
 
     # Data parallel
-    model = nn.DataParallel(model)
-    model.zero_grad()
+    parallel_model = nn.DataParallel(model)
+    parallel_model.zero_grad()
     
     print("Begin train...")
     print("We will train model in %d steps"%(train_dataloader.entpair_tot//Config.batch_size//Config.gradient_accumulation_steps*Config.max_epoch))
@@ -103,7 +103,7 @@ def train(model, train_dataloader, dev_dataloader=None):
     best_epoch = 0
     global_step = 0
     for i in range(Config.max_epoch):
-        model.train()
+        parallel_model.train()
         Config.training = True
         tot = 0
         tot_na = 0
@@ -123,7 +123,7 @@ def train(model, train_dataloader, dev_dataloader=None):
             }
             label = batch_data["label"]
             
-            loss = model(**inputs)
+            loss = parallel_model(**inputs)
             loss = loss.mean()
             loss = loss / Config.gradient_accumulation_steps
             with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -142,13 +142,14 @@ def train(model, train_dataloader, dev_dataloader=None):
             if (j+1) % Config.gradient_accumulation_steps == 0:
                 optimizer.step()
                 scheduler.step()
-                model.zero_grad()
+                parallel_model.zero_grad()
                 global_step += 1
                 # sys.stdout.write("train:epoch:%d, loss:%.3f, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, loss, tot_correct/tot, na_correct/tot_na, not_na_correct/tot_not_na))
                 sys.stdout.write("train:epoch:%d, global_step:%d, loss:%.3f\r"%(i, global_step, loss))
                 sys.stdout.flush()
         print("")
         
+    
         if i % Config.dev_step == 0:
             print("begin deving...")
             model.eval()
@@ -193,9 +194,14 @@ def train(model, train_dataloader, dev_dataloader=None):
                 best_epoch = i
             print("---------------------------------------------------------------------------------------------------")    
     log(best_auc, best_epoch) 
-        # if i % Config.save_epoch == 0:
-            # torch.save(model.state_dict(), os.path.join(Config.save_path, "ckpt"+str(i)))
 
+        if i % Config.save_epoch == 0:
+            checkpoint = {
+                'model': parallel_model.state_dict(),
+                'optimizer':optimizer.state_dict(),
+                'amp':amp.state_dict()
+            }
+            torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+str(i)))
 
 def test(model, test_dataloader):
     model.cuda()
