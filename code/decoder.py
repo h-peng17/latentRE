@@ -23,19 +23,15 @@ class BertDecoder(nn.Module):
         config = config_class.from_pretrained(Config.model_name_or_path)
         self.tokenizer = tokenizer_class.from_pretrained(Config.model_name_or_path, do_lower_case=True)
         self.model = model_class.from_pretrained(Config.model_name_or_path, from_tf=bool('.ckpt' in Config.model_name_or_path), config=config)
-
-        self.linear_for_label_info = nn.Linear(Config.hidden_size, 768)
-        self.linear_for_latent = nn.Linear(Config.hidden_size, 768)
     
-    def forward(self, input_ids, latent, label_info, attention_mask):
+    def forward(self, input_ids, attention_mask, latent=None):
         """input_ids shape is `(batch_size, sequence_length)`
            latent shape is `(batch_size, hidden_size)`
            label shape is `(batch_size, hidden_size)`
         """
         inputs = {
             'input_ids':F.relu(input_ids),
-            'latent':self.linear_for_latent(latent),
-            'label_info':self.linear_for_label_info(label_info),
+            'latent':latent,
             'attention_mask':attention_mask,
             'masked_lm_labels':input_ids
         }

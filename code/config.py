@@ -12,33 +12,41 @@ class Config():
     rel_num = 0 # This para is set in dataloader
     word_embeeding_dim = 0 # This para is set in dataloader
     pos_embedding_dim = 5
-    sen_len = 120
+    sen_len = 96
     pos_num = sen_len * 2
-    neg_samples = 1 
     batch_size = 96
-    hidden_size = 256
-    max_epoch = 60
-    dev_step = 5
+    hidden_size = 768
+    max_epoch = 20
+    dev_step = 1
     dropout = 0.5
     save_epoch = 2
     save_path = "../ckpt"
-    loss_func = ""
     training = True
+    
+    # neg sample
     down_size = False
+    neg_samples = 1 
+
+    # mode
     train_bag = False
-    eval_bag = True
+    eval_bag = False
+    
+    # train info
     info = ""
 
     # bert
     model_type = 'bert'
     model_name_or_path = "bert-base-uncased"
     gumbal_temperature = 0.5
-    
 
+    # for pre test
+    latent = False
+    
     # optimize
     lr = 3e-5
     weight_decay = 0.0
     adam_epsilon = 1e-8
     gradient_accumulation_steps = 1
     max_grad_norm = 1
-    warmup_steps = 0
+    warmup_steps = 300
+    loss_scale = 100

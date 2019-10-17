@@ -171,8 +171,19 @@ class Dataloader:
                     self.data_label[i] = 0
                 
                 # input ids for bert
-                length = min(len(words), Config.sen_len)
-                self.data_input_ids[i][0:length] = tokenizer.encode(sentence, max_length=Config.sen_len, add_special_tokens=True)[0:length]
+                bert_tokens = tokenizer.tokenize(sentence)
+                head_tokens = tokenizer.tokenize(head)
+                tail_tokens = tokenizer.tokenize(tail)
+                head_pos = bert_tokens.index(head_tokens[0])
+                bert_tokens.insert(head_pos, "[unused0]")
+                bert_tokens.insert(head_pos+len(head_tokens)+1, "[unused1]")
+                tail_pos = bert_tokens.index(tail_tokens[0])
+                bert_tokens.insert(tail_pos, "[unused2]")
+                bert_tokens.insert(tail_pos+len(tail_tokens)+1, "[unused3]")
+                bert_tokens.insert(0, "[CLS]")
+                bert_tokens.append("[SEP]")
+                length = min(len(bert_tokens), Config.sen_len)
+                self.data_input_ids[i][0:length] = tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
                 self.data_attention_mask[i][0:length] = 1
 
 
@@ -271,7 +282,7 @@ class Dataloader:
         elif flag == "ins":
             self.order = list(range(self.instance_tot))
         self.idx = 0
-        random.shuffle(self.order)
+        # random.shuffle(self.order)
 
         # weight for train crossEntropyloss
         self.weight = np.zeros((Config.rel_num), dtype=float)
@@ -281,9 +292,10 @@ class Dataloader:
 
     def next_batch(self):
         if self.idx >= len(self.order):
-            random.shuffle(self.order)
+            # if training
+            if Config.training:
+                random.shuffle(self.order)
             self.idx = 0
-
         batch_data = {} 
         idx0 = self.idx
         idx1 = self.idx + Config.batch_size
@@ -295,7 +307,7 @@ class Dataloader:
             batch_data["pos_word"] = self.data_word[index]
             batch_data["pos_pos1"] = self.data_pos1[index]
             batch_data["pos_pos2"] = self.data_pos2[index]
-            batch_data["label"] = self.data_label[index]
+            batch_data["query"] = self.data_label[index]
             batch_data["mask"] = self.data_mask[index]
             batch_data["knowledge"] = self.data_knowledge[index]
             batch_data["select_mask"] = self.data_select_mask[index]
@@ -320,6 +332,8 @@ class Dataloader:
             _word = []
             _pos1 = []
             _pos2 = []
+            _ids = []
+            _mask = []
             _rel = []
             _multi_rel = []
             _scope = []
@@ -328,6 +342,8 @@ class Dataloader:
                 _word.append(self.data_word[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _pos1.append(self.data_pos1[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _pos2.append(self.data_pos2[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
+                _ids.append(self.data_input_ids[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
+                _mask.append(self.data_attention_mask[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _rel.append(self.data_label[self.scope[self.order[i]][0]])
                 bag_size = self.scope[self.order[i]][1] - self.scope[self.order[i]][0]
                 _scope.append([cur_pos, cur_pos + bag_size])
@@ -340,7 +356,9 @@ class Dataloader:
             batch_data['pos_word'] = np.concatenate(_word)
             batch_data['pos_pos1'] = np.concatenate(_pos1)
             batch_data['pos_pos2'] = np.concatenate(_pos2)
-            batch_data['label'] = np.stack(_rel)
+            batch_data['input_ids'] = np.concatenate(_ids)
+            batch_data['attention_mask'] = np.concatenate(_mask)
+            batch_data['query'] = np.stack(_rel)
             batch_data['multi_label'] = np.stack(_multi_rel)
             batch_data['scope'] = np.stack(_scope)
 

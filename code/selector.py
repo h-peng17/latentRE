@@ -58,13 +58,13 @@ class Selector(nn.Module):
                 gumbal_logit = self.gumbal_softmax(bag_logit, Config.gumbal_temperature) 
                 # gumbal_logit  `(batch_size, rel_num)`
                 # rel_mat `(hidden_size, rel_num)`
-                label_info = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
-                return bag_logit, label_info
+                latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
+                return bag_logit, latent
             else:
                 logit = self.__logit__(x)
                 gumbal_logit = self.gumbal_softmax(logit, Config.gumbal_temperature)
-                label_info = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
-                return logit, label_info
+                latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
+                return logit, latent
         else:
             if Config.eval_bag:
                 bag_logit = []

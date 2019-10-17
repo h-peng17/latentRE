@@ -6,7 +6,7 @@ import torch.nn as nn
 import numpy as np 
 import pdb
 from config import Config
-from dnn import *
+from encoder import *
 
 class TextRepre(nn.Module):
     def __init__(self, word_vec):

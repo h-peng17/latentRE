@@ -3,8 +3,10 @@ This file contains many useful neural networks.
 """
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import pdb
 from config import Config
+from transformers import BertConfig, BertModel, BertTokenizer
 
 class MLP(nn.Module):
     '''
@@ -65,4 +67,34 @@ class RNN(nn.Module):
         output, (h_n, c_n) = self.net(input)
         return output, h_n
 
+class Bert(nn.Module):
+    '''
+    Bert model
+    '''
+    def __init__(self, ):
+        super(Bert, self).__init__()
+        # pre-train model dict
+        self.MODEL_CLASSES = {
+            'bert': (BertConfig, BertModel, BertTokenizer),
+        }
+
+        # load pretrained model
+        config_class, model_class, tokenizer_class = self.MODEL_CLASSES[Config.model_type]
+        config = config_class.from_pretrained(Config.model_name_or_path)
+        self.tokenizer = tokenizer_class.from_pretrained(Config.model_name_or_path, do_lower_case=True)
+        self.model = model_class.from_pretrained(Config.model_name_or_path, from_tf=bool('.ckpt' in Config.model_name_or_path), config=config)
+
+    def forward(self, input_ids, attention_mask):
+        '''
+        text: `(batch_size, hidden_size)`
+        '''
+        inputs = {
+            'input_ids':F.relu(input_ids),
+            'attention_mask':attention_mask
+        }
+
+        outputs = self.model(**inputs)
+        text = outputs[0][:, 0, :]
+
+        return text
 
