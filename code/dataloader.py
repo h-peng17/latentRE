@@ -14,12 +14,10 @@ from config import Config
 import multiprocessing.dummy as mp 
 
 
-
 class Dataloader:
     '''
     # This class 
     '''
-
     def __init__(self, mode, flag):    
         if not os.path.exists("../data/pre_processed_data"):
             os.mkdir("../data/pre_processed_data")
@@ -29,13 +27,11 @@ class Dataloader:
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_label.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_length.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_neg_samples.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_mask.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_relfact2scope.json")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_select_mask.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_input_ids.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_attention_mask.npy")):
+        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_attention_mask.npy")) or \
+        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_token_mask.npy")):
             print("There dones't exist pre-processed data, pre-processing...")
             start_time = time.time()
             data = json.load(open(os.path.join("../data/nyt", mode+".json")))
@@ -99,11 +95,9 @@ class Dataloader:
             self.data_length = np.zeros((self.instance_tot, ), dtype=int)
             self.data_label = np.zeros((self.instance_tot, ), dtype=int)
             self.data_knowledge = np.zeros((self.instance_tot, Config.rel_num), dtype=float)
-            self.data_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
-            self.data_neg_samples = np.zeros((self.instance_tot, Config.neg_samples), dtype=int)
-            self.data_select_mask = np.zeros((self.instance_tot, Config.rel_num), dtype=float)
-            self.data_input_ids = np.zeros((self.instance_tot, Config.sen_len), dtype=int) - 1
+            self.data_input_ids = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_attention_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
+            self.data_token_mask = np.ones((self.instance_tot, Config.sen_len), dtype=int)
 
             def _process_loop(i):
                 # for i, instance in enumerate(data):
@@ -169,8 +163,9 @@ class Dataloader:
                     self.data_label[i] = rel2id[instance["relation"]]
                 except:
                     self.data_label[i] = 0
+                    print("relation error 1")
                 
-                # input ids for bert
+                # input ids for bert and token_mask
                 bert_tokens = tokenizer.tokenize(sentence)
                 head_tokens = tokenizer.tokenize(head)
                 tail_tokens = tokenizer.tokenize(tail)
@@ -185,60 +180,39 @@ class Dataloader:
                 length = min(len(bert_tokens), Config.sen_len)
                 self.data_input_ids[i][0:length] = tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
                 self.data_attention_mask[i][0:length] = 1
+                head_pos = bert_tokens.index(head_tokens[0])
+                tail_pos = bert_tokens.index(tail_tokens[0])
+                self.data_token_mask[head_pos-1:head_pos+len(head_tokens)] = 0
+                self.data_token_mask[tail_pos-1:tail_pos+len(tail_tokens)] = 0
 
-
-                # negative sample for train
-                entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
-                pos = entities_pos_dict[entities]
-                for j in range(Config.neg_samples):
-                    index = random.randint(pos[1], self.instance_tot+pos[0]) % self.instance_tot
-                    self.data_neg_samples[i][j] = index
 
                 # knowledge 
+                entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
                 rels = knowledge[entities]
                 rel_num = len(rels)
-                if rel_num != 1 and rels[len(rels)-1]=="NA":
-                    rel_num -= 1
                 for rel in rels:
                     try:
-                        self.data_select_mask[i][rel2id[rel]] = 1                    
-                        if len(rels) != 1:
-                            if rel2id[rel] == 0:
-                                self.data_knowledge[i][rel2id[rel]] = 0
-                            else:
-                                self.data_knowledge[i][rel2id[rel]] = 1 / rel_num
-                        else:
-                            self.data_knowledge[i][rel2id[rel]] = 1.0
+                        self.data_knowledge[i][rel2id[rel]] = 1 / rel_num
                     except:
-                        continue
+                        self.data_knowledge[i][0] += 1 / rel_num
+                        print("relation error 2")
 
-                # mask words which are not entities
-                head = instance["head"]["word"].split()
-                tail = instance["tail"]["word"].split()
-                for k in range(pos1, pos1+len(head)):
-                    if k < Config.sen_len:
-                        self.data_mask[i][k] = 1
-                for k in range(pos2, pos2+len(tail)):
-                    if k < Config.sen_len:
-                        self.data_mask[i][k] = 1
             
             print("begin multiple thread processing...")
             pool = mp.Pool(12)
             pool.map(_process_loop, range(0, self.instance_tot))
 
             # save array
+            np.save(os.path.join("../data/pre_processed_data", "word_vec.npy"), self.word_vec)
             np.save(os.path.join("../data/pre_processed_data", mode+"_word.npy"), self.data_word)
             np.save(os.path.join("../data/pre_processed_data", mode+"_pos1.npy"), self.data_pos1)
             np.save(os.path.join("../data/pre_processed_data", mode+"_pos2.npy"), self.data_pos2)
             np.save(os.path.join("../data/pre_processed_data", mode+"_label.npy"), self.data_label)
             np.save(os.path.join("../data/pre_processed_data", mode+"_length.npy"), self.data_length)
-            np.save(os.path.join("../data/pre_processed_data", mode+"_neg_samples.npy"), self.data_neg_samples)
             np.save(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy"), self.data_knowledge)
-            np.save(os.path.join("../data/pre_processed_data", "word_vec.npy"), self.word_vec)
-            np.save(os.path.join("../data/pre_processed_data", mode+"_mask.npy"), self.data_mask)
-            np.save(os.path.join("../data/pre_processed_data", mode+"_select_mask.npy"), self.data_select_mask)
             np.save(os.path.join("../data/pre_processed_data", mode+"_input_ids.npy"), self.data_input_ids)
             np.save(os.path.join("../data/pre_processed_data", mode+"_attention_mask.npy"), self.data_attention_mask)
+            np.save(os.path.join("../data/pre_processed_data", mode+"_token_mask.npy"), self.data_token_mask)
             json.dump(self.entpair2scope, open(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json"), 'w'))
             json.dump(self.relfact2scope, open(os.path.join("../data/pre_processed_data", mode+"_relfact2scope.json"), "w"))
             print("end pre-process")
@@ -246,18 +220,16 @@ class Dataloader:
             print(end_time-start_time)
         else:
             print("There exists pre-processed data already. loading....")
+            self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
             self.data_word = np.load(os.path.join("../data/pre_processed_data", mode+"_word.npy"))
             self.data_pos1 = np.load(os.path.join("../data/pre_processed_data", mode+"_pos1.npy"))
             self.data_pos2 = np.load(os.path.join("../data/pre_processed_data", mode+"_pos2.npy"))
             self.data_label = np.load(os.path.join("../data/pre_processed_data", mode+"_label.npy"))
             self.data_length = np.load(os.path.join("../data/pre_processed_data", mode+"_length.npy"))
-            self.data_neg_samples = np.load(os.path.join("../data/pre_processed_data", mode+"_neg_samples.npy"))
             self.data_knowledge = np.load(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy"))
-            self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
-            self.data_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_mask.npy"))
-            self.data_select_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_select_mask.npy"))
             self.data_input_ids = np.load(os.path.join("../data/pre_processed_data", mode+"_input_ids.npy"))
             self.data_attention_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_attention_mask.npy"))
+            self.data_token_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_token_mask.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")))
             self.relfact2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_relfact2scope.json")))
             Config.word_tot = self.word_vec.shape[0] + 2
@@ -308,25 +280,11 @@ class Dataloader:
             batch_data["pos_pos1"] = self.data_pos1[index]
             batch_data["pos_pos2"] = self.data_pos2[index]
             batch_data["query"] = self.data_label[index]
-            batch_data["mask"] = self.data_mask[index]
             batch_data["knowledge"] = self.data_knowledge[index]
-            batch_data["select_mask"] = self.data_select_mask[index]
             batch_data["input_ids"] = self.data_input_ids[index]
             batch_data["attention_mask"] = self.data_attention_mask[index]
-            # neg sample (batch_size, neg_samples, sen_len)
-            neg_indexes = self.data_neg_samples[index]
-            neg_samples = Config.neg_samples
-            if neg_samples > neg_indexes.shape[1]:
-                neg_samples = neg_indexes.shape[1]
-            neg_indexes = neg_indexes[:, :neg_samples]
-            batch_data["neg_word"] = self.data_word[neg_indexes]
-            batch_data["neg_pos1"] = self.data_pos1[neg_indexes]
-            batch_data["neg_pos2"] = self.data_pos2[neg_indexes]
+            batch_data["token_mask"] = self.data_token_mask[index]
             batch_data["scope"] = None
-            multi_rel = np.zeros((idx1-idx0, Config.rel_num), dtype=np.int32)
-            for i in range(idx1-idx0):
-                multi_rel[i][self.data_label[index[i]]] = 1
-            batch_data["multi_label"] = multi_rel
             return batch_data
         else:
             _word = []
@@ -364,55 +322,6 @@ class Dataloader:
 
             return batch_data
             
-            # if Config.training and Config.down_size:
-            #     # Down-sizing 
-            #     rel = (np.stack(_rel)).tolist()
-            #     ins_sample_index = []
-            #     bag_sample_index = []
-            #     non_na_num = 1
-            #     na_num = 0
-            #     for i, r in enumerate(rel):
-            #         if r != 0:
-            #             bag_sample_index.append(i)
-            #             non_na_num += 1
-            #     for i, r in enumerate(rel):
-            #         if r == 0:
-            #             bag_sample_index.append(i)
-            #             na_num += 1
-            #         if na_num >= 3 * non_na_num:
-            #             break
-            #     scope = []
-            #     cur_pos = 0
-            #     for i, index in enumerate(bag_sample_index):
-            #         # process scope
-            #         bag_size = _scope[index][1] - _scope[index][0]
-            #         scope.append([cur_pos, cur_pos+bag_size])
-            #         cur_pos += bag_size
-            #         # process ins-sample
-            #         ins_sample_index.extend(list(range(_scope[index][0], _scope[index][1])))
-
-            #     batch_data['pos_word'] = np.concatenate(_word)[ins_sample_index]
-            #     batch_data['pos_pos1'] = np.concatenate(_pos1)[ins_sample_index]
-            #     batch_data['pos_pos2'] = np.concatenate(_pos2)[ins_sample_index]
-            #     batch_data['mask'] = np.concatenate(_mask)[ins_sample_index]
-            #     batch_data["select_mask"] = np.concatenate(_select_mask)[ins_sample_index]
-            #     batch_data['length'] = np.concatenate(_length)[ins_sample_index]
-            #     batch_data["knowledge"] = np.concatenate(_knowledge)[ins_sample_index]
-            #     batch_data['label'] = np.stack(_rel)[bag_sample_index]
-            #     batch_data["ins_label"] = np.concatenate(_ins_rel)[ins_sample_index]
-            #     batch_data['multi_label'] = np.stack(_multi_rel)[bag_sample_index]
-            #     batch_data['scope'] = np.stack(scope)
-            #     batch_data['bag_knowledge'] = np.stack(_bag_knowledge)[bag_sample_index]
-            #     # neg_samples.size(): (batch_size, neg_samples, sen_len)
-            #     neg_indexes = np.concatenate(_neg_index)[ins_sample_index]
-            #     neg_samples = Config.neg_samples
-            #     if neg_samples > neg_indexes.shape[1]:
-            #         neg_samples = neg_indexes.shape[1]
-            #     neg_indexes = neg_indexes[:, :neg_samples]
-            #     batch_data["neg_word"] = self.data_word[neg_indexes]
-            #     batch_data["neg_pos1"] = self.data_pos1[neg_indexes]
-            #     batch_data["neg_pos2"] = self.data_pos2[neg_indexes]
-            # else:
 
 
         

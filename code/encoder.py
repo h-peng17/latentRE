@@ -89,7 +89,7 @@ class Bert(nn.Module):
         text: `(batch_size, hidden_size)`
         '''
         inputs = {
-            'input_ids':F.relu(input_ids),
+            'input_ids':input_ids,
             'attention_mask':attention_mask
         }
 

@@ -39,6 +39,10 @@ class Selector(nn.Module):
         self.bias = nn.Parameter(torch.randn(Config.rel_num))
         self.softmax = nn.Softmax(1)
         self.gumbal_softmax = GumbalSoftmax()
+
+        """for mask na relation embedding"""
+        self.na_mask = torch.ones(Config.rel_num).cuda()
+        self.na_mask[0] = 0
     
     def __logit__(self, x):
         return torch.matmul(x, self.rel_mat) + self.bias
@@ -62,7 +66,8 @@ class Selector(nn.Module):
                 return bag_logit, latent
             else:
                 logit = self.__logit__(x)
-                gumbal_logit = self.gumbal_softmax(logit, Config.gumbal_temperature)
+                # mask NA relation embedding because it give no infomation for decoder
+                gumbal_logit = self.gumbal_softmax(logit, Config.gumbal_temperature) * self.na_mask
                 latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
                 return logit, latent
         else:

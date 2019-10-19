@@ -135,7 +135,8 @@ def train(model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_tot):
                 'knowledge':to_float_tensor(batch_data['knowledge']),
                 'query':to_int_tensor(batch_data["query"]),
                 'input_ids':to_int_tensor(batch_data['input_ids']),
-                'attention_mask':to_int_tensor(batch_data['attention_mask'])
+                'attention_mask':to_int_tensor(batch_data['attention_mask']),
+                'token_mask':to_int_tensor(batch_data['token_mask'])
             }
             label = batch_data["query"]
             
@@ -166,7 +167,7 @@ def train(model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_tot):
         print("")
 
         # dev
-        if i % Config.dev_step == 0:
+        if (i+1) % Config.dev_step == 0:
             print("begin deving...")
             parallel_model.eval()
             Config.training = False
@@ -230,7 +231,7 @@ def train(model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_tot):
             torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+str(i)))
 
     # after iterator, save the best perfomance
-    log(best_auc, best_epoch)
+    log(bagTest.auc, bagTest.epoch)
 
 def test(model, test_dataloader, ins_tot):
     # just for bag test
@@ -291,10 +292,13 @@ if __name__ == "__main__":
     parser.add_argument("--info", dest="info",type=str, default="", help="info for model")
     parser.add_argument("--batch_size", dest="batch_size",type=int, default=0, help="batch size")
     parser.add_argument("--latent", action='store_true', help="Whether not to use label info")
-    parser.add_argument("--loss_scale", dest="loss_scale",type=int, help="loss scale for bert MLM")
+    parser.add_argument("--loss_scale", dest="loss_scale",type=float, default=1.0, help="loss scale for bert MLM")
+    parser.add_argument("--mask_mode",dest="mask_mode",type=str, default="none",help="mask mode. you should select from {'none','entity','origin'}")
     parser.add_argument("--mode", dest="mode",type=str, default="train", help="train or test")
     parser.add_argument("--train_bag", action='store_true', help="whether not to train on bag level")
     parser.add_argument("--eval_bag", action='store_true', help="whether not to eval on bag level")
+    parser.add_argument("--max_epoch", dest="max_epoch", type=int, default=3, help="max epoch")
+    parser.add_argument("--dev_step", dest="dev_step", type=int, default=1,help="dev epoch")
     args = parser.parse_args()
     
     # set para
@@ -305,6 +309,9 @@ if __name__ == "__main__":
     Config.loss_scale = args.loss_scale
     Config.train_bag = args.train_bag
     Config.eval_bag = args.eval_bag
+    Config.max_epoch = args.max_epoch
+    Config.dev_step = args.dev_step
+    Config.mask_mode = args.mask_mode
 
     # set save path
     if not os.path.exists(Config.save_path):

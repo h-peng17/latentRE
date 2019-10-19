@@ -16,7 +16,7 @@ class Config():
     pos_num = sen_len * 2
     batch_size = 96
     hidden_size = 768
-    max_epoch = 20
+    max_epoch = 5
     dev_step = 1
     dropout = 0.5
     save_epoch = 2
@@ -38,6 +38,9 @@ class Config():
     model_type = 'bert'
     model_name_or_path = "bert-base-uncased"
     gumbal_temperature = 0.5
+    mlm_probability = 0.15
+    mask_mode = "none"
+
 
     # for pre test
     latent = False

@@ -22,29 +22,28 @@ class LatentRE(nn.Module):
         self.selector = Selector()
         self.decoder = BertDecoder()
         self.loss = Loss(weight)
-    
+        
     def forward(self, 
                     pos_word=None, 
                     pos_pos1=None, 
                     pos_pos2=None, 
                     input_ids=None, 
-                    attention_mask=None,  
+                    attention_mask=None, 
+                    token_mask=None, 
                     knowledge=None, 
                     scope=None,
                     query=None):
         if Config.training:
-            # text = self.textRepre(pos_word, pos_pos1, pos_pos2)
             text = self.encoder(input_ids, attention_mask)
             logit, latent = self.selector(text, scope, query)
+            ce_loss = self.loss.ce_loss(logit, query)
             kl_loss = self.loss.kl_loss(logit, knowledge)
             if Config.latent:
-                gen_loss = self.decoder(input_ids, attention_mask, latent)
+                gen_loss = self.decoder(input_ids, attention_mask, token_mask, latent)
                 return kl_loss + gen_loss * Config.loss_scale
             else:
                 return kl_loss
         else:
-            # text = self.textRepre(pos_word, pos_pos1, pos_pos2)
             text = self.encoder(input_ids, attention_mask)
             logit = self.selector(text, scope)
             return logit
-
