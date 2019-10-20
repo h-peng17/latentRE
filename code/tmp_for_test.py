@@ -72,7 +72,6 @@ class BagTest(object):
             precision[i] = corr/(i+1)
             recall[i] = corr/tot
         
-        # pdb.set_trace()
         f1 = (2*precision*recall / (recall+precision+1e-20)).max()
         auc = sklearn.metrics.auc(x=recall, y=precision)
         print("auc = "+str(auc)+"| "+"F1 = "+str(f1))

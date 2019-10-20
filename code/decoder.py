@@ -56,6 +56,9 @@ class BertDecoder(nn.Module):
         return inputs.cuda(), labels.cuda()
     
     def mask_not_entity_tokens(self, inputs, tokenizer, attention_mask, token_mask):
+        inputs = inputs.cpu()
+        attention_mask = attention_mask.cpu()
+        token_mask = token_mask.cpu()
         """prepare masked tokens"""
         labels = inputs.clone()
         # mask not entity tokens
@@ -75,7 +78,7 @@ class BertDecoder(nn.Module):
         labels[attention_mask] = -1
 
         # we only compute loss for not padding token
-        return inputs.cuda(), labels.cuda()
+        return inputs, labels
         
 
 

@@ -182,8 +182,8 @@ class Dataloader:
                 self.data_attention_mask[i][0:length] = 1
                 head_pos = bert_tokens.index(head_tokens[0])
                 tail_pos = bert_tokens.index(tail_tokens[0])
-                self.data_token_mask[head_pos-1:head_pos+len(head_tokens)] = 0
-                self.data_token_mask[tail_pos-1:tail_pos+len(tail_tokens)] = 0
+                self.data_token_mask[i][head_pos-1:head_pos+len(head_tokens)] = 0
+                self.data_token_mask[i][tail_pos-1:tail_pos+len(tail_tokens)] = 0
 
 
                 # knowledge 

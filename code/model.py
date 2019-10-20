@@ -40,9 +40,9 @@ class LatentRE(nn.Module):
             kl_loss = self.loss.kl_loss(logit, knowledge)
             if Config.latent:
                 gen_loss = self.decoder(input_ids, attention_mask, token_mask, latent)
-                return kl_loss + gen_loss * Config.loss_scale
+                return kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale
             else:
-                return kl_loss
+                return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
         else:
             text = self.encoder(input_ids, attention_mask)
             logit = self.selector(text, scope)

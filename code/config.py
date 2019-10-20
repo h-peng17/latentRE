@@ -52,4 +52,6 @@ class Config():
     gradient_accumulation_steps = 1
     max_grad_norm = 1
     warmup_steps = 300
-    loss_scale = 100
+    gen_loss_scale = 1.0
+    ce_loss_scale = 1.0
+    kl_loss_scale = 1.0

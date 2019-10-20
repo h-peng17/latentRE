@@ -237,16 +237,15 @@ def test(model, test_dataloader, ins_tot):
     # just for bag test
     bagTest = BagTest(test_dataloader.entpair2scope, test_dataloader.data_label)
     model.cuda()
-    parallel_model = nn.DataParallel(model)
-    parallel_model.eval()
     print("begin testing...")
     Config.training = False
-    for i in range(Config.max_epoch):
+    for i in range(1, Config.max_epoch):
         # restore the stored params
-        # if not os.path.exists(os.path.join(Config.save_path, "ckpt"+str(i))):
-        #     continue
-        # checkpoint = torch.load(os.path.join(Config.save_path, "ckpt"+str(i)))
-        # model.load_state_dict(checkpoint["model"])
+        if not os.path.exists(os.path.join(Config.save_path, "ckpt"+str(i))):
+            continue
+        checkpoint = torch.load(os.path.join(Config.save_path, "ckpt"+str(i)))
+        model.load_state_dict(checkpoint["model"])
+        model.eval()
         logits = []
         labels = []
         tot = 0
@@ -255,7 +254,8 @@ def test(model, test_dataloader, ins_tot):
         tot_correct = 0
         na_correct = 0
         not_na_correct = 0
-        for j in range(int(ins_tot // Config.batch_size)+1):
+        test_iterator = (ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (ins_tot // Config.batch_size + 1)
+        for j in range(test_iterator):
             batch_data = test_dataloader.next_batch()
             inputs = {
                 'input_ids':to_int_tensor(batch_data['input_ids']),
@@ -264,9 +264,9 @@ def test(model, test_dataloader, ins_tot):
             }
             # label = batch_data["label"]
             # multi_label = batch_data["multi_label"]
-            logit = parallel_model(**inputs)
+            logit = model(**inputs)
             bagTest.update(logit.cpu().detach())
-            sys.stdout.write("test_processed: %.3f\r" % (j/((ins_tot // Config.batch_size)+1)))
+            sys.stdout.write("test_processed: %.3f\r" % ((j+1) / test_iterator))
             sys.stdout.flush()
         bagTest.forward(i)
 
@@ -289,12 +289,16 @@ def test(model, test_dataloader, ins_tot):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="latentRE")
     parser.add_argument("--cuda", dest="cuda", type=str, default="4", help="cuda")
-    parser.add_argument("--info", dest="info",type=str, default="", help="info for model")
     parser.add_argument("--batch_size", dest="batch_size",type=int, default=0, help="batch size")
+    parser.add_argument("--gen_loss_scale", dest="gen_loss_scale",type=float, default=1.0, help="loss scale for bert MLM")
+    parser.add_argument("--kl_loss_scale", dest="kl_loss_scale",type=float, default=1.0, help="kl loss scale")
+    parser.add_argument("--ce_loss_scale", dest="ce_loss_scale",type=float, default=1.0, help="ce loss scale")
+    parser.add_argument("--info", dest="info",type=str, default="", help="info for model")
+    
     parser.add_argument("--latent", action='store_true', help="Whether not to use label info")
-    parser.add_argument("--loss_scale", dest="loss_scale",type=float, default=1.0, help="loss scale for bert MLM")
     parser.add_argument("--mask_mode",dest="mask_mode",type=str, default="none",help="mask mode. you should select from {'none','entity','origin'}")
     parser.add_argument("--mode", dest="mode",type=str, default="train", help="train or test")
+    
     parser.add_argument("--train_bag", action='store_true', help="whether not to train on bag level")
     parser.add_argument("--eval_bag", action='store_true', help="whether not to eval on bag level")
     parser.add_argument("--max_epoch", dest="max_epoch", type=int, default=3, help="max epoch")
@@ -306,7 +310,9 @@ if __name__ == "__main__":
     Config.info = args.info
     Config.batch_size = args.batch_size
     Config.latent = args.latent
-    Config.loss_scale = args.loss_scale
+    Config.gen_loss_scale = args.gen_loss_scale
+    Config.kl_loss_scale = args.kl_loss_scale
+    Config.ce_loss_scale = args.ce_loss_scale
     Config.train_bag = args.train_bag
     Config.eval_bag = args.eval_bag
     Config.max_epoch = args.max_epoch
