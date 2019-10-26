@@ -5,6 +5,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.utils as utils
 import sys
 import argparse
 import sklearn.metrics
@@ -12,7 +13,11 @@ import matplotlib
 import pdb
 import numpy as np 
 import time
+import random
 from apex import amp
+from tqdm import tqdm
+from tqdm import trange
+import time
 # Use 'Agg' so this program could run on a remote server
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -20,7 +25,10 @@ from transformers import AdamW, WarmupLinearSchedule
 from model import LatentRE
 from config import Config
 from dataloader import Dataloader
+from dataloader import Dataset
 from tmp_for_test import BagTest
+from transformers import (WEIGHTS_NAME, BertConfig,
+                            BertForMaskedLM, BertTokenizer)
 
 def log(auc, step):
     if not os.path.exists("../res"):
@@ -44,6 +52,10 @@ def log_loss(epoch, loss):
         f.write("---------------------------------------------------------------------------------------------------\n")
     f.close()
 
+def set_seed(args):
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
 
 def eval(logit, label):
     res_list = []
@@ -82,13 +94,12 @@ def eval(logit, label):
     return auc
 
 def to_int_tensor(array):
-    return torch.from_numpy(array).to(torch.int64).cuda()
+    return torch.from_numpy(array)
 
 def to_float_tensor(array):
-    return torch.from_numpy(array).to(torch.float32).cuda()
+    return torch.from_numpy(array)
 
-def train(model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_tot):
-    model.cuda()
+def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_tot):
     # params = filter(lambda x:x.requires_grad, model.parameters())
     # Prepare optimizer and schedule (linear warmup and decay)
     t_total = train_ins_tot // Config.batch_size // Config.gradient_accumulation_steps * Config.max_epoch
@@ -105,65 +116,50 @@ def train(model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_tot):
     model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
 
     # for bag test
-    bagTest = BagTest(dev_dataloader.entpair2scope, dev_dataloader.data_label)
+    bagTest = BagTest(dev_dataloader.entpair2scope, dev_dataloader.data_query)
 
     # Data parallel
     parallel_model = nn.DataParallel(model)
     parallel_model.zero_grad()
-    
+
+    # Distributed Data Parallel
+    # model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank],
+                                                    #   output_device=args.local_rank,
+                                                    #   find_unused_parameters=True)
+
     print("Begin train...")
     print("We will train model in %d steps"%(train_ins_tot//Config.batch_size//Config.gradient_accumulation_steps*Config.max_epoch))
     best_auc = 0
     best_epoch = 0
     global_step = 0
+    set_seed(args)
     for i in range(Config.max_epoch):
         # train
         parallel_model.train()
         Config.training = True
-        tot = 0
-        tot_na = 0
-        tot_not_na = 0
-        tot_correct = 0
-        na_correct = 0
-        not_na_correct = 0
-        for j in range(int(train_ins_tot / Config.batch_size)):
-            batch_data = train_dataloader.next_batch()            
+        epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
+        for j, batch in enumerate(epoch_iterator):
+            batch = train_dataloader.next_batch()
+            max_length = batch["length"].max()
             inputs = {
-                # 'pos_word':to_int_tensor(batch_data['pos_word']),
-                # 'pos_pos1':to_int_tensor(batch_data['pos_pos1']),
-                # 'pos_pos2':to_int_tensor(batch_data['pos_pos2']),
-                'knowledge':to_float_tensor(batch_data['knowledge']),
-                'query':to_int_tensor(batch_data["query"]),
-                'input_ids':to_int_tensor(batch_data['input_ids']),
-                'attention_mask':to_int_tensor(batch_data['attention_mask']),
-                'token_mask':to_int_tensor(batch_data['token_mask'])
-            }
-            label = batch_data["query"]
-            
+                'input_ids':batch["input_ids"][:, :max_length],
+                'attention_mask':to_int_tensor(batch["attention_mask"][:, :max_length]),
+                'labels':batch["labels"][:, :max_length],
+                'query':to_int_tensor(batch["query"]),
+                'knowledge':to_float_tensor(batch["knowledge"])
+            }           
             loss = parallel_model(**inputs)
             loss = loss.mean()
             loss = loss / Config.gradient_accumulation_steps
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
             nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
-            
-            # compute acc 
-            # output = output.cpu().detach().numpy()
-            # tot += label.shape[0]
-            # tot_na += (label==0).sum()
-            # tot_not_na += (label!=0).sum()
-            # tot_correct += (label==output).sum()
-            # na_correct +=np.logical_and(label==output, label==0).sum()
-            # not_na_correct += np.logical_and(label==output, label!=0).sum()
-            
+                        
             if (j+1) % Config.gradient_accumulation_steps == 0:
                 optimizer.step()
                 scheduler.step()
                 parallel_model.zero_grad()
                 global_step += 1
-                # sys.stdout.write("train:epoch:%d, loss:%.3f, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, loss, tot_correct/tot, na_correct/tot_na, not_na_correct/tot_not_na))
-                sys.stdout.write("train:epoch:%d, global_step:%d, loss:%.6f\r"%(i, global_step, loss))
-                sys.stdout.flush()
         print("")
 
         # dev
@@ -172,22 +168,10 @@ def train(model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_tot):
             parallel_model.eval()
             Config.training = False
             Config.batch_size = int(Config.batch_size / 2)
-            logits = []
-            labels = []
-            tot = 0
-            tot_na = 0
-            tot_not_na = 0
-            tot_correct = 0
-            na_correct = 0
-            not_na_correct = 0
             dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
             for j in range(dev_iterator):
                 batch_data = dev_dataloader.next_batch()
                 inputs = {
-                    # 'pos_word':to_int_tensor(batch_data['pos_word']),
-                    # 'pos_pos1':to_int_tensor(batch_data['pos_pos1']),
-                    # 'pos_pos2':to_int_tensor(batch_data['pos_pos2']),
-                    'scope':batch_data['scope'],
                     'input_ids':to_int_tensor(batch_data['input_ids']),
                     'attention_mask':to_int_tensor(batch_data['attention_mask'])
                 }
@@ -198,44 +182,23 @@ def train(model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_tot):
             print("")
             bagTest.forward(i)  
             Config.batch_size *= 2
-            #     label = batch_data["query"]
-            #     multi_label = batch_data["multi_label"]
-
-            #     # compute auc 
-            #     logit, output = model(**inputs)
-            #     logits.extend(logit.cpu().detach().numpy().tolist())
-            #     labels.extend(multi_label.tolist())
-            #     output = output.cpu().detach().numpy()
-            #     tot += label.shape[0]
-            #     tot_na += (label==0).sum()
-            #     tot_not_na += (label!=0).sum()
-            #     tot_correct += (label==output).sum()
-            #     na_correct +=np.logical_and(label==output, label==0).sum()
-            #     not_na_correct += np.logical_and(label==output, label!=0).sum()
-            #     sys.stdout.write("dev:epoch:%d, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, tot_correct/tot, na_correct/tot_na, not_na_correct/tot_not_na))
-            #     sys.stdout.flush()
-            # print("")
-            # _auc = eval(logits, labels)
-            # if _auc > best_auc:
-            #     best_auc = _auc
-            #     best_epoch = i
             print("---------------------------------------------------------------------------------------------------")
             
         # save model     
-        if i % Config.save_epoch == 0:
+        if (i+1) % Config.save_epoch == 0:
             checkpoint = {
                 'model': parallel_model.state_dict(),
                 'optimizer':optimizer.state_dict(),
                 'amp':amp.state_dict()
             }
-            torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+str(i)))
+            torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
 
     # after iterator, save the best perfomance
     log(bagTest.auc, bagTest.epoch)
 
 def test(model, test_dataloader, ins_tot):
     # just for bag test
-    bagTest = BagTest(test_dataloader.entpair2scope, test_dataloader.data_label)
+    bagTest = BagTest(test_dataloader.entpair2scope, test_dataloader.data_query)
     model.cuda()
     print("begin testing...")
     Config.training = False
@@ -262,80 +225,117 @@ def test(model, test_dataloader, ins_tot):
                 'attention_mask':to_int_tensor(batch_data['attention_mask']),
                 'scope':batch_data['scope']
             }
-            # label = batch_data["label"]
-            # multi_label = batch_data["multi_label"]
             logit = model(**inputs)
             bagTest.update(logit.cpu().detach())
             sys.stdout.write("test_processed: %.3f\r" % ((j+1) / test_iterator))
             sys.stdout.flush()
         bagTest.forward(i)
 
-        #     logits.append(logit.cpu().detach().numpy().tolist())
-        #     labels.append(multi_label.tolist())
-        #     output = output.cpu().detach().numpy()
-        #     tot += label.shape[0]
-        #     tot_na += (label==0).sum()
-        #     tot_not_na += (label!=0).sum()
-        #     tot_correct += (label==output).sum()
-        #     na_correct +=np.logical_and(label==output, label==0).sum()
-        #     not_na_correct += np.logical_and(label==output, label!=0).sum()
-        #     sys.stdout.write("dev:epoch:%d, acc:%.3f, na_acc:%.3f, not_na_acc:%.3f\r"%(i, tot_correct/tot, na_correct/tot_na, not_na_correct/tot_not_na))
-        #     sys.stdout.flush()
-        # print("")
-        # eval(logits, labels)
-        # print("---------------------------------------------------------------------------------------------------")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="latentRE")
-    parser.add_argument("--cuda", dest="cuda", type=str, default="4", help="cuda")
-    parser.add_argument("--batch_size", dest="batch_size",type=int, default=0, help="batch size")
-    parser.add_argument("--gen_loss_scale", dest="gen_loss_scale",type=float, default=1.0, help="loss scale for bert MLM")
-    parser.add_argument("--kl_loss_scale", dest="kl_loss_scale",type=float, default=1.0, help="kl loss scale")
-    parser.add_argument("--ce_loss_scale", dest="ce_loss_scale",type=float, default=1.0, help="ce loss scale")
-    parser.add_argument("--info", dest="info",type=str, default="", help="info for model")
+    parser.add_argument("--cuda", dest="cuda", type=str, 
+                        default="4", help="cuda")
+    parser.add_argument("--batch_size", dest="batch_size", type=int, 
+                        default=0, help="batch size")
+    parser.add_argument("--gen_loss_scale", dest="gen_loss_scale",type=float, 
+                        default=1.0, help="loss scale for bert MLM")
+    parser.add_argument("--kl_loss_scale", dest="kl_loss_scale",type=float, 
+                        default=1.0, help="kl loss scale")
+    parser.add_argument("--ce_loss_scale", dest="ce_loss_scale",type=float, 
+                        default=1.0, help="ce loss scale")
+    parser.add_argument("--info", dest="info",type=str, 
+                        default="", help="info for model")
+    parser.add_argument("--gumbel_temperature", dest="gumbel_temperature", type=float, 
+                        default=0.5, help="gumbel temperature")
+    parser.add_argument("--gradient_accumulation_steps", dest="gradient_accumulation_steps", type=int,
+                        default=1, help="gradient_accumulation_steps")
+
+    parser.add_argument("--latent", action='store_true', 
+                        help="Whether not to use label info")
+    parser.add_argument("--mask_mode",dest="mask_mode",type=str, 
+                        default="none",help="mask mode. you should select from {'none','entity','origin', 'governor'}")
+    parser.add_argument("--mode", dest="mode",type=str, 
+                        default="train", help="train or test")
     
-    parser.add_argument("--latent", action='store_true', help="Whether not to use label info")
-    parser.add_argument("--mask_mode",dest="mask_mode",type=str, default="none",help="mask mode. you should select from {'none','entity','origin'}")
-    parser.add_argument("--mode", dest="mode",type=str, default="train", help="train or test")
-    
-    parser.add_argument("--train_bag", action='store_true', help="whether not to train on bag level")
-    parser.add_argument("--eval_bag", action='store_true', help="whether not to eval on bag level")
-    parser.add_argument("--max_epoch", dest="max_epoch", type=int, default=3, help="max epoch")
-    parser.add_argument("--dev_step", dest="dev_step", type=int, default=1,help="dev epoch")
+    parser.add_argument("--train_bag", action='store_true', 
+                        help="whether not to train on bag level")
+    parser.add_argument("--eval_bag", action='store_true', 
+                        help="whether not to eval on bag level")
+    parser.add_argument("--max_epoch", dest="max_epoch", type=int, 
+                        default=3, help="max epoch")
+    parser.add_argument("--dev_step", dest="dev_step", type=int, 
+                        default=1,help="dev epoch")
+    parser.add_argument("--save_epoch", dest="save_epoch", type=int, 
+                        default=1,help="save epoch")
+
+
+    parser.add_argument("--seed", dest="seed", type=int,
+                        default=42, help="seed for network")
+    parser.add_argument("--local_rank", dest="local_rank", type=int,
+                        default=-1, help="local rank")
     args = parser.parse_args()
     
     # set para
     os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda
     Config.info = args.info
     Config.batch_size = args.batch_size
-    Config.latent = args.latent
     Config.gen_loss_scale = args.gen_loss_scale
     Config.kl_loss_scale = args.kl_loss_scale
     Config.ce_loss_scale = args.ce_loss_scale
+    Config.latent = args.latent
+    Config.mask_mode = args.mask_mode
     Config.train_bag = args.train_bag
     Config.eval_bag = args.eval_bag
     Config.max_epoch = args.max_epoch
     Config.dev_step = args.dev_step
-    Config.mask_mode = args.mask_mode
+    Config.gumbel_temperature = args.gumbel_temperature
+    Config.gradient_accumulation_steps = args.gradient_accumulation_steps
+    Config.save_epoch = args.save_epoch
+    print(args)
 
     # set save path
     if not os.path.exists(Config.save_path):
         os.mkdir(Config.save_path)
     if not os.path.exists("../visualizing"):
         os.mkdir("../visualizing")
+
+    # set seed
+    set_seed(args)
     
     if args.mode == "train":
         # train
         train_dataloader = Dataloader("train", "relfact" if Config.train_bag else "ins")
+        MASK_MODE = {
+            # "origin": train_dataloader.mask_tokens,
+            "entity": train_dataloader.mask_not_entity_tokens,
+            # "none": train_dataloader.not_mask,
+            "governor": train_dataloader.governor_mask,
+            "between": train_dataloader.between_entity_mask
+        }
+        MASK_MODE[Config.mask_mode](BertTokenizer.from_pretrained(Config.model_name_or_path, do_lower_case=True))
+        # train_set = Dataset(input_ids, 
+        #                     train_dataloader.data_attention_mask,
+        #                     labels,
+        #                     train_dataloader.data_query,
+        #                     train_dataloader.data_knowledge,
+        #                     train_dataloader.data_length)
+        # params = {
+        #     'batch_size': Config.batch_size,
+        #     'shuffle': True,
+        #     'num_workers': 6,
+        #     'pin_memory': True,
+        # }
+        # _train_dataloader = utils.data.DataLoader(train_set, **params)
         dev_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins")
-        print(train_dataloader.weight)
         model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
-        train(model, 
-                train_dataloader, 
-                dev_dataloader, 
-                train_dataloader.relfact_tot if Config.train_bag else train_dataloader.instance_tot,
-                dev_dataloader.entpair_tot if Config.eval_bag else dev_dataloader.instance_tot)
+        model.cuda()
+        train(args,
+              model, 
+              train_dataloader, 
+              dev_dataloader, 
+              train_dataloader.relfact_tot if Config.train_bag else train_dataloader.instance_tot,
+              dev_dataloader.entpair_tot if Config.eval_bag else dev_dataloader.instance_tot)
     elif args.mode == "test":
         # test
         if not os.path.exists(Config.save_path):
@@ -343,8 +343,8 @@ if __name__ == "__main__":
         test_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins")
         model = LatentRE(test_dataloader.word_vec, test_dataloader.weight)
         test(model, 
-                test_dataloader,
-                test_dataloader.entpair_tot if Config.eval_bag else test_dataloader.instance_tot)
+             test_dataloader,
+             test_dataloader.entpair_tot if Config.eval_bag else test_dataloader.instance_tot)
 
 
         

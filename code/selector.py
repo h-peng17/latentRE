@@ -2,6 +2,7 @@
 This file is to select a bag repre from a bag
 """
 import torch 
+import pdb 
 import torch.nn as nn
 import torch.nn.functional as F 
 from torch.autograd import Variable
@@ -41,7 +42,7 @@ class Selector(nn.Module):
         self.gumbal_softmax = GumbalSoftmax()
 
         """for mask na relation embedding"""
-        self.na_mask = torch.ones(Config.rel_num).cuda()
+        self.na_mask = nn.Parameter(torch.ones(Config.rel_num), requires_grad=False)
         self.na_mask[0] = 0
     
     def __logit__(self, x):
@@ -67,7 +68,7 @@ class Selector(nn.Module):
             else:
                 logit = self.__logit__(x)
                 # mask NA relation embedding because it give no infomation for decoder
-                gumbal_logit = self.gumbal_softmax(logit, Config.gumbal_temperature) * self.na_mask
+                gumbal_logit = self.gumbal_softmax(logit, Config.gumbel_temperature) * self.na_mask
                 latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
                 return logit, latent
         else:

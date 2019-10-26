@@ -12,13 +12,37 @@ import time
 from transformers import BertTokenizer
 from config import Config
 import multiprocessing.dummy as mp 
+from torch import utils
+import torch
 
+class Dataset(utils.data.Dataset):
+    def __init__(self, input_ids, attention_mask, labels, query, knowledge, length):
+        self.input_ids = input_ids
+        self.attention_mask = attention_mask
+        self.labels = labels
+        self.query = query
+        self.knowledge = knowledge
+        self.length = length
+    
+    def __len__(self):
+        return len(self.input_ids)
+    
+    def __getitem__(self, index):
+        length = self.length[index]
+        input_ids = self.input_ids[index]
+        atttention_mask = self.attention_mask[index]
+        labels = self.labels[index]
+        query = self.query[index]
+        knowledge = self.knowledge[index]
+
+        return input_ids, atttention_mask, labels, query, knowledge, length
 
 class Dataloader:
     '''
     # This class 
     '''
     def __init__(self, mode, flag):    
+        self.mode = mode
         if not os.path.exists("../data/pre_processed_data"):
             os.mkdir("../data/pre_processed_data")
         if not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_word.npy")) or \
@@ -93,11 +117,12 @@ class Dataloader:
             self.data_pos1 = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_pos2 = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_length = np.zeros((self.instance_tot, ), dtype=int)
-            self.data_label = np.zeros((self.instance_tot, ), dtype=int)
+            self.data_query = np.zeros((self.instance_tot, ), dtype=int)
             self.data_knowledge = np.zeros((self.instance_tot, Config.rel_num), dtype=float)
             self.data_input_ids = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_attention_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_token_mask = np.ones((self.instance_tot, Config.sen_len), dtype=int)
+            self.data_between_entity_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
 
             def _process_loop(i):
                 # for i, instance in enumerate(data):
@@ -160,9 +185,9 @@ class Dataloader:
                     self.data_pos1[i][j] = j - pos1 + Config.sen_len
                     self.data_pos2[i][j] = j - pos2 + Config.sen_len
                 try:
-                    self.data_label[i] = rel2id[instance["relation"]]
+                    self.data_query[i] = rel2id[instance["relation"]]
                 except:
-                    self.data_label[i] = 0
+                    self.data_query[i] = 0
                     print("relation error 1")
                 
                 # input ids for bert and token_mask
@@ -182,8 +207,18 @@ class Dataloader:
                 self.data_attention_mask[i][0:length] = 1
                 head_pos = bert_tokens.index(head_tokens[0])
                 tail_pos = bert_tokens.index(tail_tokens[0])
-                self.data_token_mask[i][head_pos-1:head_pos+len(head_tokens)] = 0
-                self.data_token_mask[i][tail_pos-1:tail_pos+len(tail_tokens)] = 0
+                self.data_token_mask[i][head_pos-1:head_pos+len(head_tokens)+1] = 0
+                self.data_token_mask[i][tail_pos-1:tail_pos+len(tail_tokens)+1] = 0
+                if head_pos < tail_pos:
+                    fir_pos = head_pos
+                    sec_pos = tail_pos
+                    len_fir = len(head_tokens)
+                else:
+                    fir_pos = tail_pos
+                    sec_pos = head_pos
+                    len_fir = len(tail_tokens)
+                self.data_between_entity_mask[i][fir_pos+len_fir+1:sec_pos] = 1
+                self.data_length[i] = length
 
 
                 # knowledge 
@@ -203,16 +238,18 @@ class Dataloader:
             pool.map(_process_loop, range(0, self.instance_tot))
 
             # save array
+            self.data_governor_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_governor_mask_index.npy")) if mode=="train" else None            
             np.save(os.path.join("../data/pre_processed_data", "word_vec.npy"), self.word_vec)
             np.save(os.path.join("../data/pre_processed_data", mode+"_word.npy"), self.data_word)
             np.save(os.path.join("../data/pre_processed_data", mode+"_pos1.npy"), self.data_pos1)
             np.save(os.path.join("../data/pre_processed_data", mode+"_pos2.npy"), self.data_pos2)
-            np.save(os.path.join("../data/pre_processed_data", mode+"_label.npy"), self.data_label)
+            np.save(os.path.join("../data/pre_processed_data", mode+"_label.npy"), self.data_query)
             np.save(os.path.join("../data/pre_processed_data", mode+"_length.npy"), self.data_length)
             np.save(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy"), self.data_knowledge)
             np.save(os.path.join("../data/pre_processed_data", mode+"_input_ids.npy"), self.data_input_ids)
             np.save(os.path.join("../data/pre_processed_data", mode+"_attention_mask.npy"), self.data_attention_mask)
             np.save(os.path.join("../data/pre_processed_data", mode+"_token_mask.npy"), self.data_token_mask)
+            np.save(os.path.join("../data/pre_processed_data", mode+"_between_entity_mask.npy"), self.data_between_entity_mask) 
             json.dump(self.entpair2scope, open(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json"), 'w'))
             json.dump(self.relfact2scope, open(os.path.join("../data/pre_processed_data", mode+"_relfact2scope.json"), "w"))
             print("end pre-process")
@@ -224,12 +261,14 @@ class Dataloader:
             self.data_word = np.load(os.path.join("../data/pre_processed_data", mode+"_word.npy"))
             self.data_pos1 = np.load(os.path.join("../data/pre_processed_data", mode+"_pos1.npy"))
             self.data_pos2 = np.load(os.path.join("../data/pre_processed_data", mode+"_pos2.npy"))
-            self.data_label = np.load(os.path.join("../data/pre_processed_data", mode+"_label.npy"))
+            self.data_query = np.load(os.path.join("../data/pre_processed_data", mode+"_label.npy"))
             self.data_length = np.load(os.path.join("../data/pre_processed_data", mode+"_length.npy"))
             self.data_knowledge = np.load(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy"))
             self.data_input_ids = np.load(os.path.join("../data/pre_processed_data", mode+"_input_ids.npy"))
             self.data_attention_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_attention_mask.npy"))
             self.data_token_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_token_mask.npy"))
+            self.data_governor_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_governor_mask_index.npy")) if mode=="train" else None
+            self.data_between_entity_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_between_entity_mask.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")))
             self.relfact2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_relfact2scope.json")))
             Config.word_tot = self.word_vec.shape[0] + 2
@@ -258,9 +297,53 @@ class Dataloader:
 
         # weight for train crossEntropyloss
         self.weight = np.zeros((Config.rel_num), dtype=float)
-        for i in self.data_label:
+        for i in self.data_query:
             self.weight[i] += 1
         self.weight = 1 / self.weight**0.05
+
+    
+    def to_int_tensor(self, array):
+        return torch.from_numpy(array).to(torch.int64)
+
+    def governor_mask(self, tokenizer):
+        inputs = self.to_int_tensor(self.data_input_ids)
+        attention_mask = self.to_int_tensor(self.data_attention_mask)
+        governor_mask = self.to_int_tensor(self.data_governor_mask)
+        labels = inputs.clone()
+        governor_mask_indices = governor_mask.bool()
+        attention_mask_indices = (~(attention_mask.bool())) | (~governor_mask_indices)
+        inputs[governor_mask_indices] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+        labels[attention_mask_indices] = -1
+        self.data_input_ids = inputs
+        self.data_labels = labels
+
+    def mask_not_entity_tokens(self, tokenizer):
+        inputs = self.to_int_tensor(self.data_input_ids)
+        attention_mask = self.to_int_tensor(self.data_attention_mask)
+        token_mask = self.to_int_tensor(self.data_token_mask)
+        """prepare masked tokens"""
+        labels = inputs.clone()
+        # mask not entity tokens
+        token_mask_indices = token_mask.bool()
+        attention_mask_indices = (~(attention_mask.bool())) | (~token_mask_indices)
+        inputs[token_mask_indices] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+        labels[attention_mask_indices] = -1
+        # we only compute loss for masked token && not padding token
+        self.data_input_ids = inputs
+        self.data_labels = labels
+    
+    def between_entity_mask(self, tokenizer):
+        inputs = self.to_int_tensor(self.data_input_ids)
+        attention_mask = self.to_int_tensor(self.data_attention_mask)
+        between_entity_mask = self.to_int_tensor(self.data_between_entity_mask)
+        labels = inputs.clone()
+        between_entity_mask_indices = between_entity_mask.bool()
+        attention_mask_indices = (~(attention_mask.bool())) | (~between_entity_mask_indices)
+        inputs[between_entity_mask_indices] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+        labels[attention_mask_indices] = -1
+        # we only compute loss for masked token && not padding token
+        self.data_input_ids = inputs
+        self.data_labels = labels
 
     def next_batch(self):
         if self.idx >= len(self.order):
@@ -276,14 +359,12 @@ class Dataloader:
         self.idx = idx1
         if self.flag == "ins":
             index = self.order[idx0:idx1]
-            batch_data["pos_word"] = self.data_word[index]
-            batch_data["pos_pos1"] = self.data_pos1[index]
-            batch_data["pos_pos2"] = self.data_pos2[index]
-            batch_data["query"] = self.data_label[index]
+            batch_data["query"] = self.data_query[index]
             batch_data["knowledge"] = self.data_knowledge[index]
             batch_data["input_ids"] = self.data_input_ids[index]
             batch_data["attention_mask"] = self.data_attention_mask[index]
-            batch_data["token_mask"] = self.data_token_mask[index]
+            batch_data["labels"] = self.data_labels[index] if Config.training else None 
+            batch_data["length"] = self.data_length[index]
             batch_data["scope"] = None
             return batch_data
         else:
@@ -302,13 +383,13 @@ class Dataloader:
                 _pos2.append(self.data_pos2[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _ids.append(self.data_input_ids[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _mask.append(self.data_attention_mask[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
-                _rel.append(self.data_label[self.scope[self.order[i]][0]])
+                _rel.append(self.data_query[self.scope[self.order[i]][0]])
                 bag_size = self.scope[self.order[i]][1] - self.scope[self.order[i]][0]
                 _scope.append([cur_pos, cur_pos + bag_size])
                 cur_pos = cur_pos + bag_size
                 _one_multi_rel = np.zeros((Config.rel_num), dtype=np.int32)
                 for j in range(self.scope[self.order[i]][0], self.scope[self.order[i]][1]):
-                    _one_multi_rel[self.data_label[j]] = 1
+                    _one_multi_rel[self.data_query[j]] = 1
                 _multi_rel.append(_one_multi_rel)
             
             batch_data['pos_word'] = np.concatenate(_word)

@@ -12,6 +12,7 @@ class Loss(nn.Module):
         self.kl = nn.KLDivLoss(reduction="batchmean")   
         self.crossEntropy = nn.CrossEntropyLoss(weight=torch.from_numpy(weight).to(torch.float32))
         self.softmax = nn.Softmax(dim=1)
+
     
     def ce_loss(self, logit, label):
         ce_loss = self.crossEntropy(logit, label)
@@ -23,6 +24,6 @@ class Loss(nn.Module):
         return kl_loss
 
     
-    def forward(self):
-        pass 
+
+        
         

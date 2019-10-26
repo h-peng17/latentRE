@@ -1,0 +1,124 @@
+
+import os 
+import json 
+import pdb
+import numpy as np 
+from tqdm import trange
+from config import Config
+import sys 
+import time
+import argparse 
+
+class Depparser():
+    def __init__(self):
+        pass 
+    def parser(self):
+        # merge depparsered data
+        parser_tokened_word = json.load(open("../data/parser_tokened_word0.json"))
+        word1 = json.load(open("../data/parser_tokened_word1.json"))
+        parser_governor = json.load(open("../data/parser_governor0.json"))
+        governor1 = json.load(open("../data/parser_governor1.json"))
+        parser_tokened_word.extend(word1)
+        parser_governor.extend(governor1)
+        # origin_data
+        data = json.load(open("../data/nyt/train.json"))
+        data.sort(key=lambda a: a['head']['id'] + '#' + a['tail']['id'] + "#" + a["relation"])
+        tot = len(data)
+        if tot != len(parser_tokened_word):
+            print("llll")
+        # final mask
+        mask_index = np.zeros((tot, Config.sen_len), dtype=int)
+        # warning num 
+        warning_num = 0
+        warning_in_sen_num = 0 
+        iter = trange(tot)
+        for i in iter: 
+            instance = data[i]
+            sen = instance["sentence"].lower().replace(".", '')
+            head = instance["head"]["word"].lower()
+            tail = instance["tail"]["word"].lower()
+            sen_words = sen.split()
+            tokened_word = parser_tokened_word[i]
+            governor = parser_governor[i]
+            mask = []
+            head = head.split()[0]
+            tail = tail.split()[0]
+            len_head = len(head.split())
+            len_tail = len(tail.split())
+            try:
+                hidx = tokened_word.index(head)
+                tidx = tokened_word.index(tail)
+            except:
+                warning_num += 1
+                continue
+            head_path = []
+            tail_path = []
+            head_governor = governor[hidx]
+            tail_governor = governor[tidx]
+
+            # the first child
+            child_head_path = []
+            child_tail_path = []
+            head_father = hidx+1
+            tail_father = tidx+1
+            for j, item in enumerate(governor):
+                if item == head_father:
+                    if j < hidx and j >= (hidx+len_head):
+                        child_head_path.append(j+1)
+                elif item == tail_father:
+                    if j < tidx and j >= (tidx+len_tail):
+                        child_tail_path.append(j+1)
+            key_governor = -1
+            while head_governor != 0:
+                head_path.append(head_governor)
+                head_governor = governor[head_governor-1]
+            head_path.append(0)
+            while tail_governor != 0:
+                if tail_governor in head_path:
+                    key_governor = tail_governor
+                    break
+                tail_path.append(tail_governor)
+                tail_governor = governor[tail_governor-1]
+            tail_path.append(0)
+            if key_governor == -1:
+                key_governor = 0
+            for j in head_path:
+                if j == key_governor:
+                    mask.append(j)
+                    break
+                mask.append(j)
+            for j in tail_path:
+                mask.append(j)
+            # # child 
+            # for j in child_head_path:
+            #     mask.append(j)
+            # for j in child_tail_path:
+            #     mask.append(j)
+            true_mask = [] 
+            for j in mask:
+                if j == 0:
+                    continue
+                else:
+                    text = tokened_word[j-1]
+                try:
+                    id = sen_words.index(text)
+                    true_mask.append(id)
+                except:
+                    warning_in_sen_num += 1
+                    continue
+            for m in true_mask:
+                if m < Config.sen_len:
+                    mask_index[i][m] = 1         
+        print(warning_num / tot)
+        print(warning_in_sen_num)
+        np.save("../data/pre_processed_data/train_governor_mask_index.npy", mask_index)
+
+parser = argparse.ArgumentParser(description="latentRE")
+parser.add_argument("--cuda", dest="cuda", type=str, default="4", help="cuda")
+parser.add_argument("--index", dest="index", type=int, default=0, help="index")
+args = parser.parse_args()
+
+os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda 
+depparser = Depparser()
+depparser.parser()
+        

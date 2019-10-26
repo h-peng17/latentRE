@@ -87,7 +87,7 @@ class BagTest(object):
             plt.legend(loc="upper right")
             plt.grid(True)
             plt.savefig(os.path.join(Config.save_path, 'pr_curve_' + Config.info + '.png'))
-
+            plt.close()
         return auc
     
     def forward(self, epoch):
@@ -118,7 +118,10 @@ class BagTest(object):
         if auc > self.auc:
             self.auc = auc
             self.epoch = epoch
-        
+            if not os.path.exists("../ckpt/logit"):
+                os.mkdir("../ckpt/logit")
+            np.save(os.path.join("../ckpt/logit", Config.info+".npy"), np.array(bag_logit))
+            
         self.clean()
 
 

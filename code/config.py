@@ -16,7 +16,7 @@ class Config():
     pos_num = sen_len * 2
     batch_size = 96
     hidden_size = 768
-    max_epoch = 5
+    max_epoch = 3
     dev_step = 1
     dropout = 0.5
     save_epoch = 2
@@ -37,7 +37,7 @@ class Config():
     # bert
     model_type = 'bert'
     model_name_or_path = "bert-base-uncased"
-    gumbal_temperature = 0.5
+    gumbel_temperature = 0.5
     mlm_probability = 0.15
     mask_mode = "none"
 
@@ -49,7 +49,7 @@ class Config():
     lr = 3e-5
     weight_decay = 0.0
     adam_epsilon = 1e-8
-    gradient_accumulation_steps = 1
+    gradient_accumulation_steps = 3
     max_grad_norm = 1
     warmup_steps = 300
     gen_loss_scale = 1.0
