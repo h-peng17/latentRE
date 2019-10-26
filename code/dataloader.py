@@ -9,7 +9,6 @@ import numpy as np
 import random
 import pdb
 import time
-from transformers import BertTokenizer
 from config import Config
 import multiprocessing.dummy as mp 
 from torch import utils
@@ -217,7 +216,7 @@ class Dataloader:
                     fir_pos = tail_pos
                     sec_pos = head_pos
                     len_fir = len(tail_tokens)
-                self.data_between_entity_mask[i][fir_pos+len_fir+1:sec_pos] = 1
+                self.data_between_entity_mask[i][fir_pos+len_fir+1:sec_pos-1] = 1
                 self.data_length[i] = length
 
 
@@ -257,27 +256,31 @@ class Dataloader:
             print(end_time-start_time)
         else:
             print("There exists pre-processed data already. loading....")
-            self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
-            self.data_word = np.load(os.path.join("../data/pre_processed_data", mode+"_word.npy"))
-            self.data_pos1 = np.load(os.path.join("../data/pre_processed_data", mode+"_pos1.npy"))
-            self.data_pos2 = np.load(os.path.join("../data/pre_processed_data", mode+"_pos2.npy"))
             self.data_query = np.load(os.path.join("../data/pre_processed_data", mode+"_label.npy"))
             self.data_length = np.load(os.path.join("../data/pre_processed_data", mode+"_length.npy"))
             self.data_knowledge = np.load(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy"))
             self.data_input_ids = np.load(os.path.join("../data/pre_processed_data", mode+"_input_ids.npy"))
             self.data_attention_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_attention_mask.npy"))
-            self.data_token_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_token_mask.npy"))
-            self.data_governor_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_governor_mask_index.npy")) if mode=="train" else None
-            self.data_between_entity_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_between_entity_mask.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")))
             self.relfact2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_relfact2scope.json")))
-            Config.word_tot = self.word_vec.shape[0] + 2
+            # Config.word_tot = self.word_vec.shape[0] + 2
             Config.rel_num = len(json.load(open(os.path.join("../data/nyt", "rel2id.json"))))
-            Config.word_embeeding_dim = self.word_vec.shape[1]
+            # Config.word_embeeding_dim = self.word_vec.shape[1]
             print("Finish loading...")
-            self.instance_tot = self.data_word.shape[0]
+            self.instance_tot = self.data_input_ids.shape[0]
         self.entpair_tot = len(self.entpair2scope)
         self.relfact_tot = len(self.relfact2scope)
+
+        # mask mode 
+        if self.mode == "train":
+            if Config.mask_mode == "entity":
+                self.data_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_token_mask.npy"))
+            elif Config.mask_mode == "governor":
+                self.data_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_governor_mask_index.npy"))
+            elif Config.mask_mode == "between":
+                self.data_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_between_entity_mask.npy"))
+            else:
+                self.data_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_token_mask.npy"))
         
         # order to train and scope to train
         self.flag = flag
@@ -293,65 +296,20 @@ class Dataloader:
         elif flag == "ins":
             self.order = list(range(self.instance_tot))
         self.idx = 0
-        # random.shuffle(self.order)
-
         # weight for train crossEntropyloss
         self.weight = np.zeros((Config.rel_num), dtype=float)
         for i in self.data_query:
             self.weight[i] += 1
         self.weight = 1 / self.weight**0.05
 
-    
-    def to_int_tensor(self, array):
-        return torch.from_numpy(array).to(torch.int64)
-
-    def governor_mask(self, tokenizer):
-        inputs = self.to_int_tensor(self.data_input_ids)
-        attention_mask = self.to_int_tensor(self.data_attention_mask)
-        governor_mask = self.to_int_tensor(self.data_governor_mask)
-        labels = inputs.clone()
-        governor_mask_indices = governor_mask.bool()
-        attention_mask_indices = (~(attention_mask.bool())) | (~governor_mask_indices)
-        inputs[governor_mask_indices] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
-        labels[attention_mask_indices] = -1
-        self.data_input_ids = inputs
-        self.data_labels = labels
-
-    def mask_not_entity_tokens(self, tokenizer):
-        inputs = self.to_int_tensor(self.data_input_ids)
-        attention_mask = self.to_int_tensor(self.data_attention_mask)
-        token_mask = self.to_int_tensor(self.data_token_mask)
-        """prepare masked tokens"""
-        labels = inputs.clone()
-        # mask not entity tokens
-        token_mask_indices = token_mask.bool()
-        attention_mask_indices = (~(attention_mask.bool())) | (~token_mask_indices)
-        inputs[token_mask_indices] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
-        labels[attention_mask_indices] = -1
-        # we only compute loss for masked token && not padding token
-        self.data_input_ids = inputs
-        self.data_labels = labels
-    
-    def between_entity_mask(self, tokenizer):
-        inputs = self.to_int_tensor(self.data_input_ids)
-        attention_mask = self.to_int_tensor(self.data_attention_mask)
-        between_entity_mask = self.to_int_tensor(self.data_between_entity_mask)
-        labels = inputs.clone()
-        between_entity_mask_indices = between_entity_mask.bool()
-        attention_mask_indices = (~(attention_mask.bool())) | (~between_entity_mask_indices)
-        inputs[between_entity_mask_indices] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
-        labels[attention_mask_indices] = -1
-        # we only compute loss for masked token && not padding token
-        self.data_input_ids = inputs
-        self.data_labels = labels
+    def to_tensor(self, array):
+        return torch.from_numpy(array)
 
     def next_batch(self):
         if self.idx >= len(self.order):
-            # if training
             if Config.training:
                 random.shuffle(self.order)
             self.idx = 0
-        batch_data = {} 
         idx0 = self.idx
         idx1 = self.idx + Config.batch_size
         if idx1 > len(self.order):
@@ -359,14 +317,16 @@ class Dataloader:
         self.idx = idx1
         if self.flag == "ins":
             index = self.order[idx0:idx1]
-            batch_data["query"] = self.data_query[index]
-            batch_data["knowledge"] = self.data_knowledge[index]
-            batch_data["input_ids"] = self.data_input_ids[index]
-            batch_data["attention_mask"] = self.data_attention_mask[index]
-            batch_data["labels"] = self.data_labels[index] if Config.training else None 
-            batch_data["length"] = self.data_length[index]
-            batch_data["scope"] = None
-            return batch_data
+            max_length = self.data_length[index].max()
+            if Config.training:
+                return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
+                        self.to_tensor(self.data_attention_mask[index][:, :max_length]), \
+                         self.to_tensor(self.data_mask[index][:, :max_length]), \
+                          self.to_tensor(self.data_query[index]), \
+                           self.to_tensor(self.data_knowledge[index])
+            else:
+                return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
+                        self.to_tensor(self.data_attention_mask[index][:, :max_length])
         else:
             _word = []
             _pos1 = []

@@ -89,11 +89,11 @@ class Depparser():
                 mask.append(j)
             for j in tail_path:
                 mask.append(j)
-            # # child 
-            # for j in child_head_path:
-            #     mask.append(j)
-            # for j in child_tail_path:
-            #     mask.append(j)
+            # child 
+            for j in child_head_path:
+                mask.append(j)
+            for j in child_tail_path:
+                mask.append(j)
             true_mask = [] 
             for j in mask:
                 if j == 0:

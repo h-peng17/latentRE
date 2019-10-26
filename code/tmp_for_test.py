@@ -52,6 +52,7 @@ class BagTest(object):
         self.logit = torch.cat((self.logit, logit),0)
     
     def clean(self):
+        del self.logit
         self.logit = torch.zeros((0, Config.rel_num))
 
     def eval(self, logit, label):

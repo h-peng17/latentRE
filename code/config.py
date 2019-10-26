@@ -44,6 +44,7 @@ class Config():
 
     # for pre test
     latent = False
+    first_train = True
     
     # optimize
     lr = 3e-5
