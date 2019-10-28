@@ -10,6 +10,7 @@ import random
 import pdb
 import time
 from config import Config
+from transformers import BertTokenizer
 import multiprocessing.dummy as mp 
 from torch import utils
 import torch
@@ -118,10 +119,13 @@ class Dataloader:
             self.data_length = np.zeros((self.instance_tot, ), dtype=int)
             self.data_query = np.zeros((self.instance_tot, ), dtype=int)
             self.data_knowledge = np.zeros((self.instance_tot, Config.rel_num), dtype=float)
+            # for encoder
             self.data_input_ids = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_attention_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
+            # for decoder
             self.data_token_mask = np.ones((self.instance_tot, Config.sen_len), dtype=int)
             self.data_between_entity_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
+            self.data_governor_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
 
             def _process_loop(i):
                 # for i, instance in enumerate(data):
@@ -189,7 +193,7 @@ class Dataloader:
                     self.data_query[i] = 0
                     print("relation error 1")
                 
-                # input ids for bert and token_mask
+                # for bert encoder
                 bert_tokens = tokenizer.tokenize(sentence)
                 head_tokens = tokenizer.tokenize(head)
                 tail_tokens = tokenizer.tokenize(tail)
@@ -204,10 +208,12 @@ class Dataloader:
                 length = min(len(bert_tokens), Config.sen_len)
                 self.data_input_ids[i][0:length] = tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
                 self.data_attention_mask[i][0:length] = 1
+                self.data_length[i] = length                
+                # for mask
                 head_pos = bert_tokens.index(head_tokens[0])
                 tail_pos = bert_tokens.index(tail_tokens[0])
-                self.data_token_mask[i][head_pos-1:head_pos+len(head_tokens)+1] = 0
-                self.data_token_mask[i][tail_pos-1:tail_pos+len(tail_tokens)+1] = 0
+                self.data_token_mask[i][head_pos:head_pos+len(head_tokens)] = 0
+                self.data_token_mask[i][tail_pos:tail_pos+len(tail_tokens)] = 0
                 if head_pos < tail_pos:
                     fir_pos = head_pos
                     sec_pos = tail_pos
@@ -216,9 +222,7 @@ class Dataloader:
                     fir_pos = tail_pos
                     sec_pos = head_pos
                     len_fir = len(tail_tokens)
-                self.data_between_entity_mask[i][fir_pos+len_fir+1:sec_pos-1] = 1
-                self.data_length[i] = length
-
+                self.data_between_entity_mask[i][fir_pos+len_fir:sec_pos] = 1
 
                 # knowledge 
                 entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
@@ -256,6 +260,10 @@ class Dataloader:
             print(end_time-start_time)
         else:
             print("There exists pre-processed data already. loading....")
+            # self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
+            # self.data_word = np.load(os.path.join("../data/pre_processed_data", mode+"_word.npy"))
+            # self.data_pos1 = np.load(os.path.join("../data/pre_processed_data", mode+"_pos1.npy"))
+            # self.data_pos2 = np.load(os.path.join("../data/pre_processed_data", mode+"_pos2.npy"))
             self.data_query = np.load(os.path.join("../data/pre_processed_data", mode+"_label.npy"))
             self.data_length = np.load(os.path.join("../data/pre_processed_data", mode+"_length.npy"))
             self.data_knowledge = np.load(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy"))
@@ -327,13 +335,24 @@ class Dataloader:
             else:
                 return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
                         self.to_tensor(self.data_attention_mask[index][:, :max_length])
+            # batch_data = {}
+            # batch_data['word'] = self.to_tensor(self.data_word[index])
+            # batch_data['pos1'] = self.to_tensor(self.data_pos1[index])
+            # batch_data['pos2'] = self.to_tensor(self.data_pos2[index])
+            # batch_data['query'] = self.to_tensor(self.data_query[index])
+            # batch_data['knowledge'] = self.to_tensor(self.data_knowledge[index])
+            # batch_data['label'] = None
+            # batch_data['scope'] = None
+            # return batch_data
         else:
+            batch_data = {}
             _word = []
             _pos1 = []
             _pos2 = []
             _ids = []
             _mask = []
             _rel = []
+            _label = []
             _multi_rel = []
             _scope = []
             cur_pos = 0
@@ -343,7 +362,8 @@ class Dataloader:
                 _pos2.append(self.data_pos2[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _ids.append(self.data_input_ids[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _mask.append(self.data_attention_mask[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
-                _rel.append(self.data_query[self.scope[self.order[i]][0]])
+                _rel.append(self.data_query[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
+                _label.append(self.data_query[self.scope[self.order[i]][0]])
                 bag_size = self.scope[self.order[i]][1] - self.scope[self.order[i]][0]
                 _scope.append([cur_pos, cur_pos + bag_size])
                 cur_pos = cur_pos + bag_size
@@ -352,13 +372,11 @@ class Dataloader:
                     _one_multi_rel[self.data_query[j]] = 1
                 _multi_rel.append(_one_multi_rel)
             
-            batch_data['pos_word'] = np.concatenate(_word)
-            batch_data['pos_pos1'] = np.concatenate(_pos1)
-            batch_data['pos_pos2'] = np.concatenate(_pos2)
-            batch_data['input_ids'] = np.concatenate(_ids)
-            batch_data['attention_mask'] = np.concatenate(_mask)
-            batch_data['query'] = np.stack(_rel)
-            batch_data['multi_label'] = np.stack(_multi_rel)
+            batch_data['word'] = self.to_tensor(np.concatenate(_word))
+            batch_data['pos1'] = self.to_tensor(np.concatenate(_pos1))
+            batch_data['pos2'] = self.to_tensor(np.concatenate(_pos2))
+            batch_data['query'] = self.to_tensor(np.concatenate(_rel))
+            batch_data['label'] = self.to_tensor(np.stack(_label))
             batch_data['scope'] = np.stack(_scope)
 
             return batch_data

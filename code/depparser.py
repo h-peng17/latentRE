@@ -8,11 +8,13 @@ from config import Config
 import sys 
 import time
 import argparse 
+from transformers import BertTokenizer
 
 class Depparser():
     def __init__(self):
+        self.tokenizer = BertTokenizer.from_pretrained(Config.model_name_or_path, do_lower_case=True)
         pass 
-    def parser(self):
+    def parser(self, args):
         # merge depparsered data
         parser_tokened_word = json.load(open("../data/parser_tokened_word0.json"))
         word1 = json.load(open("../data/parser_tokened_word1.json"))
@@ -37,8 +39,11 @@ class Depparser():
             sen = instance["sentence"].lower().replace(".", '')
             head = instance["head"]["word"].lower()
             tail = instance["tail"]["word"].lower()
-            sen_words = sen.split()
+            bert_tokens = self.tokenizer.tokenize(sen)
+            bert_tokens.insert(0, '[CLS]')
+            bert_tokens.append("[SEP]")
             tokened_word = parser_tokened_word[i]
+            
             governor = parser_governor[i]
             mask = []
             head = head.split()[0]
@@ -68,6 +73,7 @@ class Depparser():
                 elif item == tail_father:
                     if j < tidx and j >= (tidx+len_tail):
                         child_tail_path.append(j+1)
+            
             key_governor = -1
             while head_governor != 0:
                 head_path.append(head_governor)
@@ -89,11 +95,13 @@ class Depparser():
                 mask.append(j)
             for j in tail_path:
                 mask.append(j)
+            
             # child 
             for j in child_head_path:
                 mask.append(j)
             for j in child_tail_path:
                 mask.append(j)
+            
             true_mask = [] 
             for j in mask:
                 if j == 0:
@@ -101,7 +109,7 @@ class Depparser():
                 else:
                     text = tokened_word[j-1]
                 try:
-                    id = sen_words.index(text)
+                    id = bert_tokens.index(text)
                     true_mask.append(id)
                 except:
                     warning_in_sen_num += 1
@@ -116,9 +124,11 @@ class Depparser():
 parser = argparse.ArgumentParser(description="latentRE")
 parser.add_argument("--cuda", dest="cuda", type=str, default="4", help="cuda")
 parser.add_argument("--index", dest="index", type=int, default=0, help="index")
+parser.add_argument("--child", action="store_true", help="whether or not to mask the first child")
 args = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda 
+print(args)
 depparser = Depparser()
-depparser.parser()
+depparser.parser(args)
         

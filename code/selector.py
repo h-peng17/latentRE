@@ -48,7 +48,7 @@ class Selector(nn.Module):
     def __logit__(self, x):
         return torch.matmul(x, self.rel_mat) + self.bias
     
-    def forward(self, x, scope, query = None, knowledge=None):
+    def forward(self, x, scope, query = None):
         if Config.training:
             if Config.train_bag:
                 bag_repre = []
@@ -60,7 +60,7 @@ class Selector(nn.Module):
                 bag_repre = torch.stack(bag_repre)
 
                 bag_logit = self.__logit__(bag_repre)
-                gumbal_logit = self.gumbal_softmax(bag_logit, Config.gumbal_temperature) 
+                gumbal_logit = self.gumbal_softmax(bag_logit, Config.gumbel_temperature) 
                 # gumbal_logit  `(batch_size, rel_num)`
                 # rel_mat `(hidden_size, rel_num)`
                 latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))

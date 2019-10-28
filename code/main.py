@@ -2,6 +2,7 @@
 Train
 """
 import os
+import json
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -140,6 +141,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     global_step = 0
     set_seed(args)
     for i in range(Config.max_epoch):
+        pre_scores = []
         # train
         model.train()
         Config.training = True
@@ -151,9 +153,18 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'attention_mask':batch_data[1].cuda(),
                 'mask':batch_data[2].cuda(),
                 'query':batch_data[3].cuda(),
-                'knowledge':batch_data[4].cuda()
-            }           
-            loss = model(**inputs)
+                'knowledge':batch_data[4].cuda(),
+            }       
+            # inputs = {
+            #     'word':batch_data['word'].cuda(),
+            #     'pos1':batch_data['pos1'].cuda(),
+            #     'pos2':batch_data['pos2'].cuda(),
+            #     'query':batch_data['query'].cuda(),
+            #     'label':batch_data['label'].cuda(),
+            #     'scope':batch_data['scope']
+            # }    
+            loss, scores = model(**inputs)
+            pre_scores.append(scores.cpu().detach().numpy().tolist())
             loss = loss.mean()
             loss = loss / Config.gradient_accumulation_steps
             with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -166,8 +177,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 model.zero_grad()
                 global_step += 1
         print("")
-
+        json.dump(pre_scores, open(os.path.join("../res", Config.info+".json"), 'w'))
         # clean gpu memory cache
+        del pre_scores
         del batch_data
         torch.cuda.empty_cache()
         # dev
@@ -183,6 +195,11 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                         'input_ids':batch_data[0].cuda(),
                         'attention_mask':batch_data[1].cuda()
                     }
+                    # inputs = {
+                    #     'word': batch_data['word'].cuda(),
+                    #     'pos1': batch_data['pos1'].cuda(),
+                    #     'pos2': batch_data['pos2'].cuda()
+                    # }
                     logit = model(**inputs)
                     bagTest.update(logit.cpu().detach())
                     sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
@@ -190,7 +207,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 print("")
                 bagTest.forward(i)  
                 print("---------------------------------------------------------------------------------------------------")
-                # clean gpu memory cache
         #clean gpu memory cache
         del batch_data
         torch.cuda.empty_cache()
@@ -319,7 +335,7 @@ if __name__ == "__main__":
         # train
         train_dataloader = Dataloader("train", "relfact" if Config.train_bag else "ins")
         dev_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins")
-        model = LatentRE(train_dataloader.weight)
+        model = LatentRE(None, train_dataloader.weight)
         model.cuda()
         train(args,
               model, 

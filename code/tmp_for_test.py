@@ -44,6 +44,7 @@ class BagTest(object):
                 _one_multi_label[query[j]] = 1
             _multi_label.append(_one_multi_label)
         self.multi_label = np.stack(_multi_label)
+        np.save("../ckpt/logit/label.npy", self.multi_label)
             
         self.auc = 0
         self.epoch = 0
@@ -92,8 +93,8 @@ class BagTest(object):
         return auc
     
     def forward(self, epoch):
-        # if self.logit.size()[0] != len(self.scope):
-        #     exit("--------------------------wrong! The test data is not aligned!------------------------")
+        if self.logit.size()[0] != self.scope[-1][1]:
+            exit("--------------------------wrong! The test data is not aligned!------------------------")
         bag_logit = []
         for i in range(len(self.scope)):
             bag = self.logit[self.scope[i][0]:self.scope[i][1]]
