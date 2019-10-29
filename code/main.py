@@ -286,11 +286,11 @@ if __name__ == "__main__":
     parser.add_argument("--eval_bag", action='store_true', 
                         help="whether not to eval on bag level")
     parser.add_argument("--max_epoch", dest="max_epoch", type=int, 
-                        default=3, help="max epoch")
+                        default=4, help="max epoch")
     parser.add_argument("--dev_step", dest="dev_step", type=int, 
                         default=1,help="dev epoch")
     parser.add_argument("--save_epoch", dest="save_epoch", type=int, 
-                        default=1,help="save epoch")
+                        default=100,help="save epoch")
 
 
     parser.add_argument("--seed", dest="seed", type=int,
