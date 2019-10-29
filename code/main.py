@@ -167,7 +167,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             masks.append(batch_data[2].numpy().tolist())
             input_words.append(batch_data[0].numpy().tolist())
             
-                        
             if (j+1) % Config.gradient_accumulation_steps == 0:
                 optimizer.step()
                 scheduler.step()
