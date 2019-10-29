@@ -163,7 +163,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
             nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
-            scores.append(score.numpy().tolist())
+            scores.append(score.cpu().detach().numpy().tolist())
             masks.append(batch_data[2].numpy().tolist())
             input_words.append(batch_data[0].numpy().tolist())
             
