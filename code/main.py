@@ -126,8 +126,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     bagTest = BagTest(dev_dataloader.entpair2scope, dev_dataloader.data_query)
 
     # Data parallel
-    # parallel_model = nn.DataParallel(model)
-    # parallel_model.zero_grad()
+    parallel_model = nn.DataParallel(model)
+    parallel_model.zero_grad()
 
     # Distributed Data Parallel
     # model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank],
@@ -142,8 +142,10 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     set_seed(args)
     for i in range(Config.max_epoch):
         pre_scores = []
+        mask_word = []
+        input_word = []
         # train
-        model.train()
+        parallel_model.train()
         Config.training = True
         epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
         for j in epoch_iterator:
@@ -163,8 +165,10 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             #     'label':batch_data['label'].cuda(),
             #     'scope':batch_data['scope']
             # }    
-            loss, scores = model(**inputs)
+            loss, scores = parallel_model(**inputs)
             pre_scores.append(scores.cpu().detach().numpy().tolist())
+            mask_word.append(batch_data[2].numpy().tolist())
+            input_word.append(batch_data[0].numpy().tolist())
             loss = loss.mean()
             loss = loss / Config.gradient_accumulation_steps
             with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -174,11 +178,15 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             if (j+1) % Config.gradient_accumulation_steps == 0:
                 optimizer.step()
                 scheduler.step()
-                model.zero_grad()
+                parallel_model.zero_grad()
                 global_step += 1
         print("")
-        json.dump(pre_scores, open(os.path.join("../res", Config.info+".json"), 'w'))
+        json.dump(pre_scores, open(os.path.join("~/project-gty/penghao/res", Config.info+"score.json"), 'w'))
+        json.dump(mask_word, open(os.path.join("~/project-gty/penghao/res", Config.info+"mask.json"), 'w'))
+        json.dump(input_word, open(os.path.join("~/project-gty/penghao/res", Config.info+"input.json"), 'w'))
         # clean gpu memory cache
+        del mask_word
+        del input_word
         del pre_scores
         del batch_data
         torch.cuda.empty_cache()
@@ -186,7 +194,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         if (i+1) % Config.dev_step == 0:
             with torch.no_grad():
                 print("begin deving...")
-                model.eval()
+                parallel_model.eval()
                 Config.training = False
                 dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
                 for j in range(dev_iterator):
@@ -200,7 +208,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                     #     'pos1': batch_data['pos1'].cuda(),
                     #     'pos2': batch_data['pos2'].cuda()
                     # }
-                    logit = model(**inputs)
+                    logit = parallel_model(**inputs)
                     bagTest.update(logit.cpu().detach())
                     sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
                     sys.stdout.flush()
@@ -213,7 +221,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         # save model     
         if (i+1) % Config.save_epoch == 0:
             checkpoint = {
-                'model': model.state_dict(),
+                'model': parallel_model.state_dict(),
                 'optimizer':optimizer.state_dict(),
                 'amp':amp.state_dict()
             }
