@@ -56,48 +56,6 @@ def set_seed(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-def eval(logit, label):
-    res_list = []
-    tot = 0
-    for i in range(len(logit)):
-        for j in range(1, len(logit[i])):
-            tot += label[i][j]
-            res_list.append([logit[i][j], label[i][j]])
-            
-    #sort res_list
-    res_list.sort(key=lambda val: val[0], reverse=True)
-    precision = np.zeros((len(res_list)), dtype=float)
-    recall = np.zeros((len(res_list)), dtype=float)
-    corr = 0
-    for i, res in enumerate(res_list):
-        corr += res[1]
-        precision[i] = corr/(i+1)
-        recall[i] = corr/tot
-    
-    # pdb.set_trace()
-    f1 = (2*precision*recall / (recall+precision+1e-20)).max()
-    auc = sklearn.metrics.auc(x=recall, y=precision)
-    print("auc = "+str(auc)+"| "+"F1 = "+str(f1))
-    print('P@100: {} | P@200: {} | P@300: {} | Mean: {}'.format(precision[100], precision[200], precision[300], (precision[100] + precision[200] + precision[300]) / 3))
-    
-    plt.plot(recall, precision, lw=2, label="model")
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.ylim([0.3, 1.0])
-    plt.xlim([0.0, 0.4])
-    plt.title('Precision-Recall')
-    plt.legend(loc="upper right")
-    plt.grid(True)
-    plt.savefig(os.path.join(Config.save_path, 'pr_curve'+Config.info))
-
-    return auc
-
-def to_int_tensor(array):
-    return torch.from_numpy(array)
-
-def to_float_tensor(array):
-    return torch.from_numpy(array)
-
 def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_tot):
     # params = filter(lambda x:x.requires_grad, model.parameters())
     # Prepare optimizer and schedule (linear warmup and decay)
@@ -128,12 +86,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     # Data parallel
     parallel_model = nn.DataParallel(model)
     parallel_model.zero_grad()
-
-    # Distributed Data Parallel
-    # model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank],
-                                                    #   output_device=args.local_rank,
-                                                    #   find_unused_parameters=True)
-    
+   
     print("Begin train...")
     print("We will train model in %d steps"%(train_ins_tot//Config.batch_size//Config.gradient_accumulation_steps*Config.max_epoch))
     best_auc = 0
@@ -317,9 +270,6 @@ if __name__ == "__main__":
     # set save path
     if not os.path.exists(Config.save_path):
         os.mkdir(Config.save_path)
-    if not os.path.exists("../visualizing"):
-        os.mkdir("../visualizing")
-
     # set seed
     set_seed(args)
     
@@ -335,15 +285,6 @@ if __name__ == "__main__":
               dev_dataloader, 
               train_dataloader.relfact_tot if Config.train_bag else train_dataloader.instance_tot,
               dev_dataloader.entpair_tot if Config.eval_bag else dev_dataloader.instance_tot)
-    # elif args.mode == "test":
-    #     # test
-    #     if not os.path.exists(Config.save_path):
-    #         exit("There are not checkpoints to test!")
-    #     test_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins")
-    #     model = LatentRE(test_dataloader.weight)
-    #     test(model, 
-    #          test_dataloader,
-    #          test_dataloader.entpair_tot if Config.eval_bag else test_dataloader.instance_tot)
 
 
         
