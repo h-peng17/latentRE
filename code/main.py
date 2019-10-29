@@ -94,9 +94,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     global_step = 0
     set_seed(args)
     for i in range(Config.max_epoch):
-        scores = []
-        masks = []
-        input_words = []
+        # scores = []
+        # masks = []
+        # input_words = []
         # train
         parallel_model.train()
         Config.training = True
@@ -112,16 +112,16 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'decoder_input_ids':batch_data[5].cuda(),
                 'decoder_attention_mask':batch_data[6].cuda()
             }        
-            loss, score = parallel_model(**inputs)
+            loss = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
             nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
             
             # # just for look output
-            scores.append(score.cpu().detach().numpy().tolist())
-            masks.append(batch_data[2].numpy().tolist())
-            input_words.append(batch_data[0].numpy().tolist())            
+            # scores.append(score.cpu().detach().numpy().tolist())
+            # masks.append(batch_data[2].numpy().tolist())
+            # input_words.append(batch_data[0].numpy().tolist())            
             optimizer.step()
             scheduler.step()
             parallel_model.zero_grad()
@@ -129,9 +129,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             sys.stdout.write("epoch: %d, step: %d, loss: %.6f\r" % (i, global_step, loss))
             sys.stdout.flush()
         print("")
-        json.dump(scores, open(os.path.join("../res", Config.info + "score.json"), 'w'))
-        json.dump(masks, open(os.path.join("../res", Config.info + "mask.json"), 'w'))
-        json.dump(input_words, open(os.path.join("../res", Config.info + "input.json"), 'w'))
+        # json.dump(scores, open(os.path.join("../res", Config.info + "score.json"), 'w'))
+        # json.dump(masks, open(os.path.join("../res", Config.info + "mask.json"), 'w'))
+        # json.dump(input_words, open(os.path.join("../res", Config.info + "input.json"), 'w'))
         # clean gpu memory cache
         torch.cuda.empty_cache()
         # dev
