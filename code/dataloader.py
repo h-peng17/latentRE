@@ -260,10 +260,6 @@ class Dataloader:
             print(end_time-start_time)
         else:
             print("There exists pre-processed data already. loading....")
-            # self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
-            # self.data_word = np.load(os.path.join("../data/pre_processed_data", mode+"_word.npy"))
-            # self.data_pos1 = np.load(os.path.join("../data/pre_processed_data", mode+"_pos1.npy"))
-            # self.data_pos2 = np.load(os.path.join("../data/pre_processed_data", mode+"_pos2.npy"))
             self.data_query = np.load(os.path.join("../data/pre_processed_data", mode+"_label.npy"))
             self.data_length = np.load(os.path.join("../data/pre_processed_data", mode+"_length.npy"))
             self.data_knowledge = np.load(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy"))
@@ -271,9 +267,7 @@ class Dataloader:
             self.data_attention_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_attention_mask.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")))
             self.relfact2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_relfact2scope.json")))
-            # Config.word_tot = self.word_vec.shape[0] + 2
             Config.rel_num = len(json.load(open(os.path.join("../data/nyt", "rel2id.json"))))
-            # Config.word_embeeding_dim = self.word_vec.shape[1]
             print("Finish loading...")
             self.instance_tot = self.data_input_ids.shape[0]
         self.entpair_tot = len(self.entpair2scope)
@@ -335,15 +329,6 @@ class Dataloader:
             else:
                 return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
                         self.to_tensor(self.data_attention_mask[index][:, :max_length])
-            # batch_data = {}
-            # batch_data['word'] = self.to_tensor(self.data_word[index])
-            # batch_data['pos1'] = self.to_tensor(self.data_pos1[index])
-            # batch_data['pos2'] = self.to_tensor(self.data_pos2[index])
-            # batch_data['query'] = self.to_tensor(self.data_query[index])
-            # batch_data['knowledge'] = self.to_tensor(self.data_knowledge[index])
-            # batch_data['label'] = None
-            # batch_data['scope'] = None
-            # return batch_data
         else:
             batch_data = {}
             _word = []

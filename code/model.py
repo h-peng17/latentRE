@@ -32,13 +32,13 @@ class LatentRE(nn.Module):
                   knowledge=None, 
                   scope=None):
         if Config.training:
-            # text = self.encoder(input_ids, attention_mask)
-            # logit, latent = self.selector(text, scope, query)
-            # ce_loss = self.loss.ce_loss(logit, query)
-            # kl_loss = self.loss.kl_loss(logit, knowledge)
+            text = self.encoder(input_ids, attention_mask)
+            logit, latent = self.selector(text, scope, query)
+            ce_loss = self.loss.ce_loss(logit, query)
+            kl_loss = self.loss.kl_loss(logit, knowledge)
             if Config.latent:
-                gen_loss, scores = self.decoder(input_ids, attention_mask, mask, None)
-                return gen_loss * Config.gen_loss_scale, scores
+                gen_loss, score = self.decoder(input_ids, attention_mask, mask, latent)
+                return kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale, score
             else:
                 return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
         else:

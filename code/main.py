@@ -141,9 +141,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     global_step = 0
     set_seed(args)
     for i in range(Config.max_epoch):
-        pre_scores = []
-        mask_word = []
-        input_word = []
+        scores = []
+        masks = []
+        input_words = []
         # train
         parallel_model.train()
         Config.training = True
@@ -156,24 +156,17 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'mask':batch_data[2].cuda(),
                 'query':batch_data[3].cuda(),
                 'knowledge':batch_data[4].cuda(),
-            }       
-            # inputs = {
-            #     'word':batch_data['word'].cuda(),
-            #     'pos1':batch_data['pos1'].cuda(),
-            #     'pos2':batch_data['pos2'].cuda(),
-            #     'query':batch_data['query'].cuda(),
-            #     'label':batch_data['label'].cuda(),
-            #     'scope':batch_data['scope']
-            # }    
-            loss, scores = parallel_model(**inputs)
-            pre_scores.append(scores.cpu().detach().numpy().tolist())
-            mask_word.append(batch_data[2].numpy().tolist())
-            input_word.append(batch_data[0].numpy().tolist())
+            }        
+            loss, score = parallel_model(**inputs)
             loss = loss.mean()
             loss = loss / Config.gradient_accumulation_steps
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
             nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
+            scores.append(score)
+            masks.append(batch_data[2].numpy().tolist())
+            input_words.append(batch_data[0].numpy().tolist())
+            
                         
             if (j+1) % Config.gradient_accumulation_steps == 0:
                 optimizer.step()
@@ -181,20 +174,20 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 parallel_model.zero_grad()
                 global_step += 1
         print("")
-        json.dump(pre_scores, open(os.path.join("~/project-gty/penghao/res", Config.info+"score.json"), 'w'))
-        json.dump(mask_word, open(os.path.join("~/project-gty/penghao/res", Config.info+"mask.json"), 'w'))
-        json.dump(input_word, open(os.path.join("~/project-gty/penghao/res", Config.info+"input.json"), 'w'))
+        json.dump(scores, open(os.path.join("~/project-gty/penghao/res", Config.info+"score.json"), 'w'))
+        json.dump(masks, open(os.path.join("~/project-gty/penghao/res", Config.info+"mask.json"), 'w'))
+        json.dump(input_words, open(os.path.join("~/project-gty/penghao/res", Config.info+"input.json"), 'w'))
         # clean gpu memory cache
-        del mask_word
-        del input_word
-        del pre_scores
+        del scores
+        del masks
+        del input_words
         del batch_data
         torch.cuda.empty_cache()
         # dev
         if (i+1) % Config.dev_step == 0:
             with torch.no_grad():
                 print("begin deving...")
-                parallel_model.eval()
+                model.eval()
                 Config.training = False
                 dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
                 for j in range(dev_iterator):
@@ -203,12 +196,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                         'input_ids':batch_data[0].cuda(),
                         'attention_mask':batch_data[1].cuda()
                     }
-                    # inputs = {
-                    #     'word': batch_data['word'].cuda(),
-                    #     'pos1': batch_data['pos1'].cuda(),
-                    #     'pos2': batch_data['pos2'].cuda()
-                    # }
-                    logit = parallel_model(**inputs)
+                    logit = model(**inputs)
                     bagTest.update(logit.cpu().detach())
                     sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
                     sys.stdout.flush()
@@ -351,15 +339,15 @@ if __name__ == "__main__":
               dev_dataloader, 
               train_dataloader.relfact_tot if Config.train_bag else train_dataloader.instance_tot,
               dev_dataloader.entpair_tot if Config.eval_bag else dev_dataloader.instance_tot)
-    elif args.mode == "test":
-        # test
-        if not os.path.exists(Config.save_path):
-            exit("There are not checkpoints to test!")
-        test_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins")
-        model = LatentRE(test_dataloader.weight)
-        test(model, 
-             test_dataloader,
-             test_dataloader.entpair_tot if Config.eval_bag else test_dataloader.instance_tot)
+    # elif args.mode == "test":
+    #     # test
+    #     if not os.path.exists(Config.save_path):
+    #         exit("There are not checkpoints to test!")
+    #     test_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins")
+    #     model = LatentRE(test_dataloader.weight)
+    #     test(model, 
+    #          test_dataloader,
+    #          test_dataloader.entpair_tot if Config.eval_bag else test_dataloader.instance_tot)
 
 
         
