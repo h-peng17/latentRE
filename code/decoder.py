@@ -52,42 +52,34 @@ class BertDecoder(nn.Module):
         # The rest of the time (10% of the time) we keep the masked input tokens unchanged
         return inputs.cuda(), labels.cuda()
     
-    def mask_not_entity_tokens(self, inputs, tokenizer, attention_mask, token_mask):
+    def mask_not_entity_tokens(self, inputs, tokenizer, token_mask):
         inputs = inputs.cpu()
-        attention_mask = attention_mask.cpu()
         token_mask = token_mask.cpu()
-        """prepare masked tokens"""
         labels = inputs.clone()
-        # mask not entity tokens
         token_mask_indices = token_mask.bool()
-        attention_mask_indices = (~(attention_mask.bool())) | (~token_mask_indices)
         inputs[token_mask_indices] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
-        labels[attention_mask_indices] = -1
+        labels[~token_mask_indices] = -1
 
         # we only compute loss for masked token && not padding token
         return inputs.cuda(), labels.cuda()
     
-    def governor_mask(self, inputs, tokenizer, attention_mask, governor_mask):
+    def governor_mask(self, inputs, tokenizer, governor_mask):
         inputs = inputs.cpu()
-        attention_mask = attention_mask.cpu()
         governor_mask = governor_mask.cpu()
         labels = inputs.clone()
         governor_mask_indices = governor_mask.bool()
-        attention_mask_indices = (~(attention_mask.bool())) | (~governor_mask_indices)
         inputs[governor_mask_indices] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
-        labels[attention_mask_indices] = -1
+        labels[~governor_mask_indices] = -1
 
         return inputs.cuda(), labels.cuda()
     
-    def mask_between_entity(self, inputs, tokenizer, attention_mask, between_mask):
+    def mask_between_entity(self, inputs, tokenizer, between_mask):
         inputs = inputs.cpu()
-        attention_mask = attention_mask.cpu()
         between_mask = between_mask.cpu()
         labels = inputs.clone()
         between_entity_mask_indices = between_mask.bool()
-        attention_mask_indices = (~(attention_mask.bool())) | (~between_entity_mask_indices)
         inputs[between_entity_mask_indices] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
-        labels[attention_mask_indices] = -1
+        labels[~between_entity_mask_indices] = -1
         # we only compute loss for masked token && not padding token
         return inputs.cuda(), labels.cuda()
 
@@ -109,7 +101,7 @@ class BertDecoder(nn.Module):
         """        
         # pdb.set_trace()
         mask_func = self.MASK_MODE[Config.mask_mode]
-        input_ids, labels = mask_func(input_ids, self.tokenizer, attention_mask, mask)
+        input_ids, labels = mask_func(input_ids, self.tokenizer, mask)
 
         inputs = {
             'input_ids':input_ids,

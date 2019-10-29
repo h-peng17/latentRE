@@ -147,8 +147,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         # train
         parallel_model.train()
         Config.training = True
-        epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
-        for j in epoch_iterator:
+        # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
+        for j in range(int(train_ins_tot/Config.batch_size)):
             batch_data = train_dataloader.next_batch()
             inputs = {
                 'input_ids':batch_data[0].cuda(),
@@ -159,30 +159,27 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             }        
             loss, score = parallel_model(**inputs)
             loss = loss.mean()
-            loss = loss / Config.gradient_accumulation_steps
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
             nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
+            
+            # just for look output
             scores.append(score.cpu().detach().numpy().tolist())
             masks.append(batch_data[2].numpy().tolist())
-            input_words.append(batch_data[0].numpy().tolist())
+            input_words.append(batch_data[0].numpy().tolist())            
             
-            if (j+1) % Config.gradient_accumulation_steps == 0:
-                optimizer.step()
-                scheduler.step()
-                parallel_model.zero_grad()
-                global_step += 1
+            optimizer.step()
+            scheduler.step()
+            parallel_model.zero_grad()
+            global_step += 1
+            sys.stdout.write("epoch: %d, step: %d, loss: %d\r" % (i, global_step, loss))
+            sys.stdout.flush()
         print("")
         json.dump(scores, open(os.path.join("../res", Config.info + "score.json"), 'w'))
         json.dump(masks, open(os.path.join("../res", Config.info + "mask.json"), 'w'))
         json.dump(input_words, open(os.path.join("../res", Config.info + "input.json"), 'w'))
         # clean gpu memory cache
-        del scores
-        del masks
-        del input_words
-        del batch_data
         torch.cuda.empty_cache()
-        continue
         # dev
         if (i+1) % Config.dev_step == 0:
             with torch.no_grad():
@@ -204,7 +201,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 bagTest.forward(i)  
                 print("---------------------------------------------------------------------------------------------------")
                 #clean gpu memory cache
-                del batch_data
                 torch.cuda.empty_cache()
         # save model     
         if (i+1) % Config.save_epoch == 0:

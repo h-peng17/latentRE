@@ -44,7 +44,6 @@ class BagTest(object):
                 _one_multi_label[query[j]] = 1
             _multi_label.append(_one_multi_label)
         self.multi_label = np.stack(_multi_label)
-        np.save("../ckpt/logit/label.npy", self.multi_label)
             
         self.auc = 0
         self.epoch = 0
@@ -120,9 +119,6 @@ class BagTest(object):
         if auc > self.auc:
             self.auc = auc
             self.epoch = epoch
-            if not os.path.exists("../ckpt/logit"):
-                os.mkdir("../ckpt/logit")
-            np.save(os.path.join("../ckpt/logit", Config.info+".npy"), np.array(bag_logit))
             
         self.clean()
 
