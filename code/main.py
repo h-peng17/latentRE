@@ -125,7 +125,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             scheduler.step()
             parallel_model.zero_grad()
             global_step += 1
-            sys.stdout.write("epoch: %d, step: %d, loss: %d\r" % (i, global_step, loss))
+            sys.stdout.write("epoch: %d, step: %d, loss: %.6f\r" % (i, global_step, loss))
             sys.stdout.flush()
         print("")
         json.dump(scores, open(os.path.join("../res", Config.info + "score.json"), 'w'))
