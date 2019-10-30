@@ -37,7 +37,7 @@ class Dataset(utils.data.Dataset):
 
         return input_ids, atttention_mask, labels, query, knowledge, length
 
-class Dataloader:
+class NYTDataloader:
     '''
     # This class 
     '''
@@ -379,6 +379,16 @@ class Dataloader:
             batch_data['scope'] = np.stack(_scope)
 
             return batch_data
+
+class WIKIDataloader():
+    def __init__(self, mode, flag):
+        self.mode = mode 
+        self.flag = flag
+        if not os.path.exists("../"):
+
+
+        else:
+
             
 
 
