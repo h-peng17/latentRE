@@ -27,7 +27,8 @@ class BertDecoder(nn.Module):
         self.MASK_MODE = {
             "entity": self.mask_not_entity_tokens,
             "between": self.mask_between_entity,
-            "governor": self.governor_mask
+            "governor": self.governor_mask,
+            "none": self.not_mask
         }
 
     def mask_tokens(self, inputs, tokenizer, attention_mask):
@@ -101,6 +102,7 @@ class BertDecoder(nn.Module):
         """        
         # pdb.set_trace()
         mask_func = self.MASK_MODE[Config.mask_mode]
+        mask = mask if Config.mask_mode in ["entity", 'governor', 'between'] else attention_mask
         input_ids, labels = mask_func(input_ids, self.tokenizer, mask)
 
         inputs = {

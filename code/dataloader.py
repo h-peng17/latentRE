@@ -380,14 +380,6 @@ class Dataloader:
 
             return batch_data
 
-# class WIKIDataloader():
-#     def __init__(self, mode, flag):
-#         self.mode = mode 
-#         self.flag = flag
-#         if not os.path.exists("../"):
-
-
-#         else:
 
             
 
