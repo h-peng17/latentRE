@@ -37,7 +37,7 @@ class Dataset(utils.data.Dataset):
 
         return input_ids, atttention_mask, labels, query, knowledge, length
 
-class NYTDataloader:
+class Dataloader:
     '''
     # This class 
     '''
@@ -380,14 +380,14 @@ class NYTDataloader:
 
             return batch_data
 
-class WIKIDataloader():
-    def __init__(self, mode, flag):
-        self.mode = mode 
-        self.flag = flag
-        if not os.path.exists("../"):
+# class WIKIDataloader():
+#     def __init__(self, mode, flag):
+#         self.mode = mode 
+#         self.flag = flag
+#         if not os.path.exists("../"):
 
 
-        else:
+#         else:
 
             
 
