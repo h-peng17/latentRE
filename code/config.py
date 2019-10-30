@@ -44,13 +44,12 @@ class Config():
 
     # for pre test
     latent = False
-    first_train = True
     
     # optimize
     lr = 3e-5
     weight_decay = 0.0
     adam_epsilon = 1e-8
-    gradient_accumulation_steps = 3
+    gradient_accumulation_steps = 1
     max_grad_norm = 1
     warmup_steps = 300
     gen_loss_scale = 1.0

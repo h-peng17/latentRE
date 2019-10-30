@@ -69,16 +69,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     optimizer = AdamW(optimizer_grouped_parameters, lr=Config.lr, eps=Config.adam_epsilon)
     scheduler = WarmupLinearSchedule(optimizer, warmup_steps=Config.warmup_steps, t_total=t_total)
 
-    if Config.first_train:
-        # amp training 
-        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
-    else:
-        # load model
-        checkpoint = torch.load(os.path.join(Config.save_path, "ckpt"+Config.info+str(3)))
-        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
-        model.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        amp.load_state_dict(checkpoint['amp'])
+    # amp training 
+    model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
 
     # for bag test
     bagTest = BagTest(dev_dataloader.entpair2scope, dev_dataloader.data_query)
@@ -121,7 +113,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             # # just for look output
             # scores.append(score.cpu().detach().numpy().tolist())
             # masks.append(batch_data[2].numpy().tolist())
-            # input_words.append(batch_data[0].numpy().tolist())            
+            # input_words.append(batch_data[5].numpy().tolist())            
             optimizer.step()
             scheduler.step()
             parallel_model.zero_grad()
@@ -138,7 +130,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         if (i+1) % Config.dev_step == 0:
             with torch.no_grad():
                 print("begin deving...")
-                model.eval()
+                parallel_model.eval()
                 Config.training = False
                 dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
                 for j in range(dev_iterator):
@@ -147,7 +139,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                         'input_ids':batch_data[0].cuda(),
                         'attention_mask':batch_data[1].cuda()
                     }
-                    logit = model(**inputs)
+                    logit = parallel_model(**inputs)
                     bagTest.update(logit.cpu().detach())
                     sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
                     sys.stdout.flush()
@@ -215,14 +207,11 @@ if __name__ == "__main__":
                         default=1.0, help="kl loss scale")
     parser.add_argument("--ce_loss_scale", dest="ce_loss_scale",type=float, 
                         default=1.0, help="ce loss scale")
+    parser.add_argument("--lr", dest="lr", type=float,
+                        default=3e-5, help='learning rate')
     parser.add_argument("--info", dest="info",type=str, 
                         default="", help="info for model")
-    parser.add_argument("--gumbel_temperature", dest="gumbel_temperature", type=float, 
-                        default=0.5, help="gumbel temperature")
-    parser.add_argument("--gradient_accumulation_steps", dest="gradient_accumulation_steps", type=int,
-                        default=1, help="gradient_accumulation_steps")
-    parser.add_argument("--first_train", action="store_false",
-                        help="whether or not first train")
+
 
     parser.add_argument("--latent", action='store_true', 
                         help="Whether not to use label info")
@@ -256,16 +245,14 @@ if __name__ == "__main__":
     Config.gen_loss_scale = args.gen_loss_scale
     Config.kl_loss_scale = args.kl_loss_scale
     Config.ce_loss_scale = args.ce_loss_scale
+    Config.lr = args.lr
     Config.latent = args.latent
     Config.mask_mode = args.mask_mode
     Config.train_bag = args.train_bag
     Config.eval_bag = args.eval_bag
     Config.max_epoch = args.max_epoch
     Config.dev_step = args.dev_step
-    Config.gumbel_temperature = args.gumbel_temperature
-    Config.gradient_accumulation_steps = args.gradient_accumulation_steps
     Config.save_epoch = args.save_epoch
-    Config.first_train = args.first_train
     print(args)
 
     # set save path
