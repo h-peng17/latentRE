@@ -3,6 +3,7 @@ This file is to gen knowledge
 """
 import os 
 import json 
+from sys import argv
 
 
 if not os.path.exists("../data/knowledge"):
