@@ -337,7 +337,7 @@ class Dataloader:
                         self.to_tensor(self.data_attention_mask[index][:, :max_length]), \
                          self.to_tensor(self.data_mask[index][:, :max_length]), \
                           self.to_tensor(self.data_query[index]), \
-                           self.to_tensor(self.data_knowledge[index]), \
+                           self.to_tensor(self.data_knowledge[index]).to(torch.float64), \
                             self.to_tensor(self.data_decoder_input_ids[index][:, :max_length]), \
                              self.to_tensor(self.data_decoder_attention_mask[index][:, :max_length])
             else:
