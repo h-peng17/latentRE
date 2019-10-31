@@ -1,6 +1,7 @@
 """
 # This file is to calculate loss 
 """
+import pdb 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F 
@@ -20,6 +21,7 @@ class Loss(nn.Module):
 
     def kl_loss(self, logit, knowledge):
         # kl-loss:
+        pdb.set_trace()
         kl_loss = self.kl(F.log_softmax(logit, dim=-1), knowledge).sum(0)
         return kl_loss
 
