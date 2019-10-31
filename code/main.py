@@ -57,7 +57,6 @@ def set_seed(args):
     torch.manual_seed(args.seed)
 
 def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_tot):
-    # params = filter(lambda x:x.requires_grad, model.parameters())
     # Prepare optimizer and schedule (linear warmup and decay)
     t_total = train_ins_tot // Config.batch_size // Config.gradient_accumulation_steps * Config.max_epoch
 
@@ -66,11 +65,11 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': Config.weight_decay},
         {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
         ]
-    optimizer = AdamW(optimizer_grouped_parameters, lr=Config.lr, eps=Config.adam_epsilon)
+    optimizer = AdamW(optimizer_grouped_parameters, lr=Config.lr, eps=Config.adam_epsilon, correct_bias=False)
     scheduler = WarmupLinearSchedule(optimizer, warmup_steps=Config.warmup_steps, t_total=t_total)
 
     # amp training 
-    # model, optimizer = amp.initialize(model, optimizer, opt_level="O0")
+    model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
 
     # for bag test
     bagTest = BagTest(dev_dataloader.entpair2scope, dev_dataloader.data_query)
@@ -86,9 +85,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     global_step = 0
     set_seed(args)
     for i in range(Config.max_epoch):
-        # scores = []
-        # masks = []
-        # input_words = []
         # train
         parallel_model.train()
         Config.training = True
@@ -106,15 +102,10 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             }        
             loss = parallel_model(**inputs)
             loss = loss.mean()
-            loss.backward()
-            # with amp.scale_loss(loss, optimizer) as scaled_loss:
-                # scaled_loss.backward()
-            # nn.utils.clip_grad_norm_(optimizer_grouped_parameters, Config.max_grad_norm)
-            
-            # # just for look output
-            # scores.append(score.cpu().detach().numpy().tolist())
-            # masks.append(batch_data[2].numpy().tolist())
-            # input_words.append(batch_data[5].numpy().tolist())            
+            with amp.scale_loss(loss, optimizer) as scaled_loss:
+                scaled_loss.backward()
+            nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
+                      
             optimizer.step()
             scheduler.step()
             parallel_model.zero_grad()
@@ -122,9 +113,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             sys.stdout.write("epoch: %d, step: %d, loss: %.6f\r" % (i, global_step, loss))
             sys.stdout.flush()
         print("")
-        # json.dump(scores, open(os.path.join("../res", Config.info + "score.json"), 'w'))
-        # json.dump(masks, open(os.path.join("../res", Config.info + "mask.json"), 'w'))
-        # json.dump(input_words, open(os.path.join("../res", Config.info + "input.json"), 'w'))
         # clean gpu memory cache
         torch.cuda.empty_cache()
         # dev
