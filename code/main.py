@@ -70,7 +70,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     scheduler = WarmupLinearSchedule(optimizer, warmup_steps=Config.warmup_steps, t_total=t_total)
 
     # amp training 
-    model, optimizer = amp.initialize(model, optimizer, opt_level="O0")
+    # model, optimizer = amp.initialize(model, optimizer, opt_level="O0")
 
     # for bag test
     bagTest = BagTest(dev_dataloader.entpair2scope, dev_dataloader.data_query)
@@ -106,9 +106,10 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             }        
             loss = parallel_model(**inputs)
             loss = loss.mean()
-            with amp.scale_loss(loss, optimizer) as scaled_loss:
-                scaled_loss.backward()
-            nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
+            loss.backward()
+            # with amp.scale_loss(loss, optimizer) as scaled_loss:
+                # scaled_loss.backward()
+            nn.utils.clip_grad_norm_(optimizer_grouped_parameters, Config.max_grad_norm)
             
             # # just for look output
             # scores.append(score.cpu().detach().numpy().tolist())
