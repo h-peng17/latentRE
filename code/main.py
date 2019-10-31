@@ -109,7 +109,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             loss.backward()
             # with amp.scale_loss(loss, optimizer) as scaled_loss:
                 # scaled_loss.backward()
-            nn.utils.clip_grad_norm_(optimizer_grouped_parameters, Config.max_grad_norm)
+            # nn.utils.clip_grad_norm_(optimizer_grouped_parameters, Config.max_grad_norm)
             
             # # just for look output
             # scores.append(score.cpu().detach().numpy().tolist())
