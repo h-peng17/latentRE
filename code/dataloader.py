@@ -236,12 +236,15 @@ class Dataloader:
                 entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
                 rels = knowledge[entities]
                 rel_num = len(rels)
+                tot_prop = 1 if rel_num == 1 and rels[0] == "NA" else 0.95
+                na_prop = 0 if rel_num == 1 and rels[0] == "NA" else 0.05 
                 for rel in rels:
                     try:
-                        self.data_knowledge[i][rel2id[rel]] = 1 / rel_num
+                        self.data_knowledge[i][rel2id[rel]] = tot_prop / rel_num
                     except:
-                        self.data_knowledge[i][0] += 1 / rel_num
+                        self.data_knowledge[i][0] += tot_prop / rel_num
                         print("relation error 2")
+                self.data_knowledge[i][0] += na_prop
 
             
             print("begin multiple thread processing...")
