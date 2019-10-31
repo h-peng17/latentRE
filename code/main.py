@@ -190,6 +190,8 @@ if __name__ == "__main__":
                         default="4", help="cuda")
     parser.add_argument("--batch_size", dest="batch_size", type=int, 
                         default=0, help="batch size")
+    parser.add_argument("--dataset", dest="dataset", type=str,
+                        default='nyt',help='dataset to use')
     parser.add_argument("--gen_loss_scale", dest="gen_loss_scale",type=float, 
                         default=1.0, help="loss scale for bert MLM")
     parser.add_argument("--kl_loss_scale", dest="kl_loss_scale",type=float, 
@@ -242,6 +244,7 @@ if __name__ == "__main__":
     Config.max_epoch = args.max_epoch
     Config.dev_step = args.dev_step
     Config.save_epoch = args.save_epoch
+    Config.dataset = args.dataset
     print(args)
 
     # set save path
@@ -252,8 +255,8 @@ if __name__ == "__main__":
     
     if args.mode == "train":
         # train
-        train_dataloader = Dataloader("train", "relfact" if Config.train_bag else "ins", 'nyt')
-        dev_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins", 'nyt')
+        train_dataloader = Dataloader("train", "relfact" if Config.train_bag else "ins", Config.dataset)
+        dev_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins", Config.dataset)
         model = LatentRE(None, train_dataloader.weight)
         model.cuda()
         train(args,

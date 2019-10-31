@@ -22,6 +22,7 @@ class Config():
     save_epoch = 2
     save_path = "../ckpt"
     training = True
+    dataset = 'nyt'
     
     # neg sample
     down_size = False
