@@ -51,7 +51,7 @@ class Config():
     adam_epsilon = 1e-8
     gradient_accumulation_steps = 1
     max_grad_norm = 1
-    warmup_steps = 300
+    warmup_steps = 500
     gen_loss_scale = 1.0
     ce_loss_scale = 1.0
     kl_loss_scale = 1.0

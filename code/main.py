@@ -58,7 +58,7 @@ def set_seed(args):
 
 def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_tot):
     # Prepare optimizer and schedule (linear warmup and decay)
-    t_total = train_ins_tot // Config.batch_size // Config.gradient_accumulation_steps * Config.max_epoch
+    t_total = train_ins_tot // Config.batch_size * Config.max_epoch
 
     no_decay = ['bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
