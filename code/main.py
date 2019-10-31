@@ -252,8 +252,8 @@ if __name__ == "__main__":
     
     if args.mode == "train":
         # train
-        train_dataloader = Dataloader("train", "relfact" if Config.train_bag else "ins")
-        dev_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins")
+        train_dataloader = Dataloader("train", "relfact" if Config.train_bag else "ins", 'nyt')
+        dev_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins", 'nyt')
         model = LatentRE(None, train_dataloader.weight)
         model.cuda()
         train(args,

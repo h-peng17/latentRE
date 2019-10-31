@@ -41,14 +41,11 @@ class Dataloader:
     '''
     # This class 
     '''
-    def __init__(self, mode, flag):    
+    def __init__(self, mode, flag, dataset):    
         self.mode = mode
         if not os.path.exists("../data/pre_processed_data"):
             os.mkdir("../data/pre_processed_data")
-        if not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_word.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_pos1.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_pos2.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_label.npy")) or \
+        if not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_label.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_length.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")) or \
@@ -58,35 +55,16 @@ class Dataloader:
         not os.path.exists(os.path.join("../data/pre_processed_data", mode+"_token_mask.npy")):
             print("There dones't exist pre-processed data, pre-processing...")
             start_time = time.time()
-            data = json.load(open(os.path.join("../data/nyt", mode+".json")))
-            knowledge = json.load(open(os.path.join("../data/knowledge",mode+'.json')))
-            ori_word_vec = json.load(open(os.path.join("../data/nyt","word_vec.json")))
-            Config.word_tot = len(ori_word_vec) + 2
+            data = json.load(open(os.path.join("../data/"+dataset, mode+".json")))
+            knowledge = json.load(open(os.path.join("../data/knowledge",dataset+"_"+mode+'.json')))
 
             # Bert tokenizer
             tokenizer = BertTokenizer.from_pretrained(Config.model_name_or_path, do_lower_case=True)
 
-            # process word vec
-            word2id = {}
-            word2id["blk"] = 0
-            word2id["unk"] = 1
-            for word in ori_word_vec:
-                w = word["word"].lower()
-                word2id[w] = len(word2id)
-            
             # process rel2id
-            rel2id = json.load(open(os.path.join("../data/nyt","rel2id.json")))
+            rel2id = json.load(open(os.path.join("../data/"+dataset,"rel2id.json")))
             Config.rel_num = len(rel2id)
 
-            # process word_vec
-            word_vec = []
-            word_vec.append(np.zeros((len(ori_word_vec[0]["vec"]))))
-            word_vec.append(np.random.random_sample(len(ori_word_vec[0]["vec"])))
-            for word in ori_word_vec:
-                word_vec.append(word["vec"])
-            self.word_vec = np.asarray(word_vec)
-            Config.word_embeeding_dim = len(word_vec[0])
-            
             # sort data by head and tail and get entities-pos dict          
             data.sort(key=lambda a: a['head']['id'] + '#' + a['tail']['id'] + "#" + a["relation"])   
             entities_pos_dict = {}    
@@ -113,9 +91,6 @@ class Dataloader:
 
             # process data
             self.instance_tot = len(data)
-            self.data_word = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
-            self.data_pos1 = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
-            self.data_pos2 = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_length = np.zeros((self.instance_tot, ), dtype=int)
             self.data_query = np.zeros((self.instance_tot, ), dtype=int)
             self.data_knowledge = np.zeros((self.instance_tot, Config.rel_num), dtype=float)
@@ -135,60 +110,6 @@ class Dataloader:
                 sentence = instance["sentence"]
                 head = instance["head"]["word"]
                 tail = instance["tail"]["word"]
-                p1 = sentence.find(' ' + head + ' ')
-                p2 = sentence.find(' ' + tail + ' ')
-                if p1 == -1:
-                    if sentence[:len(head) + 1] == head + " ":
-                        p1 = 0
-                    elif sentence[-len(head) - 1:] == " " + head:
-                        p1 = len(sentence) - len(head)
-                    else:
-                        p1 = 0 # shouldn't happen
-                else:
-                    p1 += 1
-                if p2 == -1:
-                    if sentence[:len(tail) + 1] == tail + " ":
-                        p2 = 0
-                    elif sentence[-len(tail) - 1:] == " " + tail:
-                        p2 = len(sentence) - len(tail)
-                    else:
-                        p2 = 0 # shouldn't happen
-                else:
-                    p2 += 1
-
-                words = sentence.split()
-                cur_ref_data_word = self.data_word[i]         
-                cur_pos = 0
-                pos1 = -1
-                pos2 = -1
-                for j, word in enumerate(words):
-                    if j < Config.sen_len:
-                        word = word.lower()
-                        if word in word2id:
-                            cur_ref_data_word[j] = word2id[word]
-                        else:
-                            cur_ref_data_word[j] = 1
-                    if cur_pos == p1:
-                        pos1 = j
-                        p1 = -1
-                    if cur_pos == p2:
-                        pos2 = j
-                        p2 = -1
-                    cur_pos += len(word) + 1
-                for j in range(j + 1, Config.sen_len):
-                    cur_ref_data_word[j] = 0
-                self.data_length[i] = len(words)
-                if len(words) > Config.sen_len:
-                    self.data_length[i] = Config.sen_len
-                if pos1 == -1 or pos2 == -1:
-                    raise Exception("[ERROR] Position error, index = {}, sentence = {}, head = {}, tail = {}".format(i, sentence, head, tail))
-                if pos1 >= Config.sen_len:
-                    pos1 = Config.sen_len - 1
-                if pos2 >= Config.sen_len:
-                    pos2 = Config.sen_len - 1
-                for j in range(Config.sen_len):
-                    self.data_pos1[i][j] = j - pos1 + Config.sen_len
-                    self.data_pos2[i][j] = j - pos2 + Config.sen_len
                 try:
                     self.data_query[i] = rel2id[instance["relation"]]
                 except:
@@ -236,27 +157,22 @@ class Dataloader:
                 entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
                 rels = knowledge[entities]
                 rel_num = len(rels)
-                tot_prop = 1 if rel_num == 1 and rels[0] == "NA" else 0.95
-                na_prop = 0 if rel_num == 1 and rels[0] == "NA" else 0.05 
+                # tot_prop = 1 if rel_num == 1 and rels[0] == "NA" else 0.95
+                # na_prop = 0 if rel_num == 1 and rels[0] == "NA" else 0.05 
                 for rel in rels:
                     try:
-                        self.data_knowledge[i][rel2id[rel]] = tot_prop / rel_num
+                        self.data_knowledge[i][rel2id[rel]] = 1 / rel_num
                     except:
-                        self.data_knowledge[i][0] += tot_prop / rel_num
+                        self.data_knowledge[i][0] += 1 / rel_num
                         print("relation error 2")
-                self.data_knowledge[i][0] += na_prop
+                # self.data_knowledge[i][0] += na_prop
 
-            
             print("begin multiple thread processing...")
             pool = mp.Pool(12)
             pool.map(_process_loop, range(0, self.instance_tot))
 
             # save array
             self.data_governor_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_governor_mask_index.npy")) if mode=="train" else None            
-            np.save(os.path.join("../data/pre_processed_data", "word_vec.npy"), self.word_vec)
-            np.save(os.path.join("../data/pre_processed_data", mode+"_word.npy"), self.data_word)
-            np.save(os.path.join("../data/pre_processed_data", mode+"_pos1.npy"), self.data_pos1)
-            np.save(os.path.join("../data/pre_processed_data", mode+"_pos2.npy"), self.data_pos2)
             np.save(os.path.join("../data/pre_processed_data", mode+"_label.npy"), self.data_query)
             np.save(os.path.join("../data/pre_processed_data", mode+"_length.npy"), self.data_length)
             np.save(os.path.join("../data/pre_processed_data", mode+"_knowledge.npy"), self.data_knowledge)
@@ -282,7 +198,7 @@ class Dataloader:
             self.data_decoder_attention_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_decoder_attention_mask.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_entpair2scope.json")))
             self.relfact2scope = json.load(open(os.path.join("../data/pre_processed_data", mode+"_relfact2scope.json")))
-            Config.rel_num = len(json.load(open(os.path.join("../data/nyt", "rel2id.json"))))
+            Config.rel_num = len(json.load(open(os.path.join("../data/"+dataset, "rel2id.json"))))
             print("Finish loading...")
             self.instance_tot = self.data_input_ids.shape[0]
         self.entpair_tot = len(self.entpair2scope)
