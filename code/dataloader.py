@@ -295,13 +295,13 @@ class Dataloader:
         self.relfact_tot = len(self.relfact2scope)
 
         # mask mode 
-        # if self.mode == "train":
-        #     if Config.mask_mode == "entity":
-        #         self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
-        #     elif Config.mask_mode == "between":
-        #         self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_between_entity_mask.npy"))
-        #     else:
-        #         self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
+        if self.mode == "train":
+            if Config.mask_mode == "entity":
+                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
+            elif Config.mask_mode == "between":
+                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_between_entity_mask.npy"))
+            else:
+                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
         
         # order to train and scope to train
         self.flag = flag
@@ -339,22 +339,22 @@ class Dataloader:
         if self.flag == "ins":
             index = self.order[idx0:idx1]
             max_length = self.data_length[index].max()
-            # if Config.training:
-            #     return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
-            #             self.to_tensor(self.data_attention_mask[index][:, :max_length]), \
-            #              self.to_tensor(self.data_mask[index][:, :max_length]), \
-            #               self.to_tensor(self.data_query[index]), \
-            #                self.to_tensor(self.data_knowledge[index]), \
-            #                 self.to_tensor(self.data_decoder_input_ids[index][:, :max_length]), \
-            #                  self.to_tensor(self.data_decoder_attention_mask[index][:, :max_length])
-            # else:
-            #     return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
-            #             self.to_tensor(self.data_attention_mask[index][:, :max_length])
-            batch_data = {}
-            batch_data['word'] = self.to_tensor(self.data_word[index][:, :max_length])
-            batch_data['pos1'] = self.to_tensor(self.data_pos1[index][:, :max_length])
-            batch_data['pos2'] = self.to_tensor(self.data_pos2[index][:, :max_length])
-            return batch_data
+            if Config.training:
+                return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
+                        self.to_tensor(self.data_attention_mask[index][:, :max_length]), \
+                         self.to_tensor(self.data_mask[index][:, :max_length]), \
+                          self.to_tensor(self.data_query[index]), \
+                           self.to_tensor(self.data_knowledge[index]), \
+                            self.to_tensor(self.data_decoder_input_ids[index][:, :max_length]), \
+                             self.to_tensor(self.data_decoder_attention_mask[index][:, :max_length])
+            else:
+                return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
+                        self.to_tensor(self.data_attention_mask[index][:, :max_length])
+            # batch_data = {}
+            # batch_data['word'] = self.to_tensor(self.data_word[index][:, :max_length])
+            # batch_data['pos1'] = self.to_tensor(self.data_pos1[index][:, :max_length])
+            # batch_data['pos2'] = self.to_tensor(self.data_pos2[index][:, :max_length])
+            # return batch_data
         else:
             batch_data = {}
             _word = []
