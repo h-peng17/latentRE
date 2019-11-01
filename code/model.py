@@ -18,7 +18,7 @@ import time
 class LatentRE(nn.Module):
     def __init__(self, word_vec, weight=None):
         super(LatentRE, self).__init__()
-        # self.textRepre = TextRepre(word_vec)
+        self.textRepre = TextRepre(word_vec)
         self.encoder = Bert()
         self.selector = Selector()
         self.decoder = BertDecoder()
@@ -26,6 +26,10 @@ class LatentRE(nn.Module):
         # self.decoder_margin = BertDecoder()
         
     def forward(self, 
+                  word=None,
+                  pos1=None,
+                  pos2=None,
+                  label=None,
                   input_ids=None, 
                   attention_mask=None, 
                   decoder_input_ids=None,
@@ -34,22 +38,32 @@ class LatentRE(nn.Module):
                   query=None,
                   knowledge=None, 
                   scope=None):
+        # if Config.training:
+        #     text = self.encoder(input_ids, attention_mask)
+        #     logit, latent = self.selector(text, scope, query)
+        #     ce_loss = self.loss.ce_loss(logit, query)
+        #     kl_loss = self.loss.kl_loss(logit, knowledge)
+        #     if Config.latent:
+        #         gen_loss = self.decoder(decoder_input_ids, decoder_attention_mask, mask, latent)
+        #         # margin_gen_loss = self.decoder_margin(decoder_input_ids, decoder_attention_mask, mask, None)
+        #         # loss = kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale - margin_gen_loss + 4.0
+        #         # return torch.nn.functional.relu(loss)
+        #         return kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale
+        #     else:
+        #         return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
+        # else:
+        #     text = self.encoder(input_ids, attention_mask)
+        #     logit = self.selector(text, scope)
+        #     return logit
+
         if Config.training:
-            text = self.encoder(input_ids, attention_mask)
+            text = self.textRepre(word, pos1, pos2)
             logit, latent = self.selector(text, scope, query)
-            ce_loss = self.loss.ce_loss(logit, query)
-            kl_loss = self.loss.kl_loss(logit, knowledge)
-            if Config.latent:
-                gen_loss = self.decoder(decoder_input_ids, decoder_attention_mask, mask, latent)
-                # margin_gen_loss = self.decoder_margin(decoder_input_ids, decoder_attention_mask, mask, None)
-                # loss = kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale - margin_gen_loss + 4.0
-                # return torch.nn.functional.relu(loss)
-                return kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale
-            else:
-                return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
+            ce_loss = self.loss.ce_loss(logit, label)
+            return ce_loss
         else:
-            text = self.encoder(input_ids, attention_mask)
-            logit = self.selector(text, scope)
+            text = self.textRepre(word, pos1, pos2)
+            logit = self.selector(text, None)
             return logit
 
 
