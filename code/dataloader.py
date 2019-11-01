@@ -127,17 +127,17 @@ class Dataloader:
             self.data_between_entity_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_governor_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
 
-            def _process_loop(i):
-                # for i, instance in enumerate(data):
+            # def _process_loop(i):
+            for i in range(len(data)):
                 instance = data[i]
                 sentence = instance["sentence"]
                 head = instance["head"]["word"]
                 tail = instance["tail"]["word"]
-                try:
-                    self.data_query[i] = rel2id[instance["relation"]]
-                except:
-                    self.data_query[i] = 0
-                    print("relation error 1")
+                # try:
+                #     self.data_query[i] = rel2id[instance["relation"]]
+                # except:
+                #     self.data_query[i] = 0
+                #     print("relation error 1")
                 
                 p1 = sentence.find(' ' + head + ' ')
                 p2 = sentence.find(' ' + tail + ' ')
@@ -181,9 +181,9 @@ class Dataloader:
                     cur_pos += len(word) + 1
                 for j in range(j + 1, Config.sen_len):
                     cur_ref_data_word[j] = 0
-                self.data_length[i] = len(words)
-                if len(words) > Config.sen_len:
-                    self.data_length[i] = Config.sen_len
+                # self.data_length[i] = len(words)
+                # if len(words) > Config.sen_len:
+                    # self.data_length[i] = Config.sen_len
                 if pos1 == -1 or pos2 == -1:
                     raise Exception("[ERROR] Position error, index = {}, sentence = {}, head = {}, tail = {}".format(i, sentence, head, tail))
                 if pos1 >= Config.sen_len:
@@ -245,9 +245,9 @@ class Dataloader:
                 #         print("relation error 2")
                 # self.data_knowledge[i][0] += na_prop
 
-            print("begin multiple thread processing...")
-            pool = mp.Pool(12)
-            pool.map(_process_loop, range(0, self.instance_tot))
+            # print("begin multiple thread processing...")
+            # pool = mp.Pool(12)
+            # pool.map(_process_loop, range(0, self.instance_tot))
 
             # save array
             np.save(os.path.join("../data/pre_processed_data", "word_vec.npy"), self.word_vec)
