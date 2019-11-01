@@ -42,7 +42,7 @@ class LatentRE(nn.Module):
             if Config.latent:
                 gen_loss = self.decoder(decoder_input_ids, decoder_attention_mask, mask, latent)
                 margin_gen_loss = self.decoder_margin(decoder_input_ids, decoder_attention_mask, mask, None)
-                loss = kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale - margin_gen_loss + 2.0
+                loss = kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale - margin_gen_loss + 4.0
                 return torch.nn.functional.relu(loss)
             else:
                 return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
