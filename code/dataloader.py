@@ -127,8 +127,8 @@ class Dataloader:
             self.data_between_entity_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_governor_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
 
-            def _process_loop(i):
-            # for i in range(len(data)):
+            # def _process_loop(i):
+            for i in range(len(data)):
                 instance = data[i]
                 sentence = instance["sentence"].lower().replace("\n","")
                 head = instance["head"]["word"]
@@ -178,6 +178,7 @@ class Dataloader:
                     if cur_pos == p2:
                         pos2 = j
                         p2 = -1
+                    pdb.set_trace()
                     cur_pos += len(word) + 1
                 for j in range(j + 1, Config.sen_len):
                     cur_ref_data_word[j] = 0
