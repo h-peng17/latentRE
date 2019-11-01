@@ -129,7 +129,11 @@ class Dataloader:
 
             def _process_loop(i):
                 instance = data[i]
-                sentence = instance["sentence"].lower().replace("\n","").replace("  ", ' ')
+                words = instance["sentence"].lower().split()
+                sentence = ''
+                for word in words:
+                    sentence += word 
+                    sentence += ' '
                 head = instance["head"]["word"]
                 tail = instance["tail"]["word"]
                 # try:
