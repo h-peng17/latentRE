@@ -42,7 +42,8 @@ class LatentRE(nn.Module):
             if Config.latent:
                 gen_loss = self.decoder(decoder_input_ids, decoder_attention_mask, mask, latent)
                 margin_gen_loss = self.decoder_margin(decoder_input_ids, decoder_attention_mask, mask, None)
-                loss, _ = torch.max(kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale - margin_gen_loss + 2.0, torch.zeros(0, dtype=torch.float32))
+                loss, _ = torch.max(kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale - margin_gen_loss + 2.0, \
+                                    torch.zeros(kl_loss.shape).to(kl_loss.device))
                 return loss
             else:
                 return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
