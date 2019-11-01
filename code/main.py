@@ -270,7 +270,7 @@ if __name__ == "__main__":
         # train
         train_dataloader = Dataloader("train", "relfact" if Config.train_bag else "ins", Config.dataset)
         dev_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins", Config.dataset)
-        model = LatentRE(None, train_dataloader.weight)
+        model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
         model.cuda()
         train(args,
               model, 
