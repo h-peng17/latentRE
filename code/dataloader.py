@@ -127,11 +127,10 @@ class Dataloader:
             self.data_between_entity_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_governor_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
 
-            # def _process_loop(i):
-            pdb.set_trace()
-            for i in range(len(data)):
+            def _process_loop(i):
+                # for i, instance in enumerate(data):
                 instance = data[i]
-                sentence = instance["sentence"]
+                sentence = instance["sentence"].lower()
                 head = instance["head"]["word"]
                 tail = instance["tail"]["word"]
                 # try:
@@ -246,9 +245,9 @@ class Dataloader:
                 #         print("relation error 2")
                 # self.data_knowledge[i][0] += na_prop
 
-            # print("begin multiple thread processing...")
-            # pool = mp.Pool(12)
-            # pool.map(_process_loop, range(0, self.instance_tot))
+            print("begin multiple thread processing...")
+            pool = mp.Pool(12)
+            pool.map(_process_loop, range(0, self.instance_tot))
 
             # save array
             np.save(os.path.join("../data/pre_processed_data", "word_vec.npy"), self.word_vec)
