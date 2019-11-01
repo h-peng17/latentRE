@@ -351,9 +351,9 @@ class Dataloader:
             #     return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
             #             self.to_tensor(self.data_attention_mask[index][:, :max_length])
             batch_data = {}
-            batch_data['word'] = self.to_tensor(self.data_word[index][:, max_length])
-            batch_data['pos1'] = self.to_tensor(self.data_pos1[index][:, max_length])
-            batch_data['pos2'] = self.to_tensor(self.data_pos2[index][:, max_length])
+            batch_data['word'] = self.to_tensor(self.data_word[index][:, :max_length])
+            batch_data['pos1'] = self.to_tensor(self.data_pos1[index][:, :max_length])
+            batch_data['pos2'] = self.to_tensor(self.data_pos2[index][:, :max_length])
             return batch_data
         else:
             batch_data = {}
