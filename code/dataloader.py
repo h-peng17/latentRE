@@ -128,6 +128,7 @@ class Dataloader:
             self.data_governor_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
 
             # def _process_loop(i):
+            pdb.set_trace()
             for i in range(len(data)):
                 instance = data[i]
                 sentence = instance["sentence"]
