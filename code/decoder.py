@@ -28,17 +28,17 @@ class BertDecoder(nn.Module):
             "entity": self.mask_not_entity_tokens,
             "between": self.mask_between_entity,
             "governor": self.governor_mask,
-            "none": self.not_mask
+            # "none": self.not_mask,
+            "origin":self.mask_tokens
         }
 
-    def mask_tokens(self, inputs, tokenizer, attention_mask):
+    def mask_tokens(self, inputs, tokenizer, token_mask):
         inputs = inputs.cpu()
-        padding = ((1 - attention_mask) * 100).cpu()
-        inputs = inputs + padding
-        """ Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original. """
+        token_mask = token_mask.cpu()
         labels = inputs.clone()
+        """ Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original. """
         # We sample a few tokens in each sequence for masked-LM training (with probability Config.mlm_probability defaults to 0.15 in Bert/RoBERTa)
-        masked_indices = torch.bernoulli(torch.full(labels.shape, Config.mlm_probability)).bool()
+        masked_indices = torch.bernoulli(torch.full(labels.shape, Config.mlm_probability)).bool() & (token_mask.bool())
         labels[~masked_indices] = -1  # We only compute loss on masked tokens
 
         # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
@@ -102,7 +102,7 @@ class BertDecoder(nn.Module):
         """        
         # pdb.set_trace()
         mask_func = self.MASK_MODE[Config.mask_mode]
-        mask = mask if Config.mask_mode in ["entity", 'governor', 'between'] else attention_mask
+        # mask = mask if Config.mask_mode in ["entity", 'governor', 'between', 'origin'] else attention_mask
         input_ids, labels = mask_func(input_ids, self.tokenizer, mask)
 
         inputs = {

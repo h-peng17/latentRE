@@ -52,8 +52,8 @@ class Dataloader:
         not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_relfact2scope.json")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_input_ids.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_attention_mask.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_word.npy")):
+        not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy")):
+        # not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_word.npy")):
             print("There dones't exist pre-processed data, pre-processing...")
             start_time = time.time()
             data = json.load(open(os.path.join("../data/"+dataset, mode+".json")))
@@ -273,10 +273,11 @@ class Dataloader:
             print(end_time-start_time)
         else:
             print("There exists pre-processed data already. loading....")
-            self.word_vec = np.load(os.path.join("../data/pre_processed_data", 'word_vec.npy'))
-            self.data_word = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_word.npy"))
-            self.data_pos1 = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos1.npy"))
-            self.data_pos2 = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos2.npy"))
+            self.word_vec = None
+            # self.word_vec = np.load(os.path.join("../data/pre_processed_data", 'word_vec.npy'))
+            # self.data_word = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_word.npy"))
+            # self.data_pos1 = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos1.npy"))
+            # self.data_pos2 = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos2.npy"))
             self.data_query = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_label.npy"))
             self.data_length = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_length.npy"))
             self.data_knowledge = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy"))
@@ -286,8 +287,8 @@ class Dataloader:
             self.data_decoder_attention_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_attention_mask.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json")))
             self.relfact2scope = json.load(open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_relfact2scope.json")))
-            Config.word_embeeding_dim = len(self.word_vec[0])
-            Config.word_tot = len(self.word_vec) + 2
+            # Config.word_embeeding_dim = len(self.word_vec[0])
+            # Config.word_tot = len(self.word_vec) + 2
             Config.rel_num = len(json.load(open(os.path.join("../data/"+dataset, "rel2id.json"))))
             print("Finish loading...")
             self.instance_tot = self.data_input_ids.shape[0]
@@ -300,6 +301,8 @@ class Dataloader:
                 self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
             elif Config.mask_mode == "between":
                 self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_between_entity_mask.npy"))
+            elif Config.mask_mode == "origin":
+                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
             else:
                 self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
         
