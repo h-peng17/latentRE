@@ -108,6 +108,7 @@ class BertDecoder(nn.Module):
         inputs = {
             'input_ids':input_ids,
             'latent':latent,
+            'mask':mask,
             'attention_mask':attention_mask,
             'masked_lm_labels':labels
         }
