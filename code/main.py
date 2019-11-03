@@ -199,7 +199,7 @@ if __name__ == "__main__":
     parser.add_argument("--ce_loss_scale", dest="ce_loss_scale",type=float, 
                         default=1.0, help="ce loss scale")
     parser.add_argument("--lr", dest="lr", type=float,
-                        default=3e-5, help='learning rate')
+                        default=5e-5, help='learning rate')
     parser.add_argument("--info", dest="info",type=str, 
                         default="", help="info for model")
 
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_bag", action='store_true', 
                         help="whether not to eval on bag level")
     parser.add_argument("--max_epoch", dest="max_epoch", type=int, 
-                        default=4, help="max epoch")
+                        default=3, help="max epoch")
     parser.add_argument("--dev_step", dest="dev_step", type=int, 
                         default=1,help="dev epoch")
     parser.add_argument("--save_epoch", dest="save_epoch", type=int, 
