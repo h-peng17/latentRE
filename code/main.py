@@ -88,8 +88,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         # train
         parallel_model.train()
         Config.training = True
-        # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
-        for j in range(int(train_ins_tot/Config.batch_size)):
+        epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
+        for j in epoch_iterator:
             batch_data = train_dataloader.next_batch()
             inputs = {
                 'input_ids':batch_data[0].cuda(),
@@ -110,8 +110,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             scheduler.step()
             parallel_model.zero_grad()
             global_step += 1
-            sys.stdout.write("epoch: %d, step: %d, loss: %.6f\r" % (i, global_step, loss))
-            sys.stdout.flush()
+            # sys.stdout.write("epoch: %d, step: %d, loss: %.6f\r" % (i, global_step, loss))
+            # sys.stdout.flush()
         print("")
         # clean gpu memory cache
         torch.cuda.empty_cache()
