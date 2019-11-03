@@ -115,6 +115,16 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         print("")
         # clean gpu memory cache
         torch.cuda.empty_cache()
+        
+        # save model     
+        if (i+1) % Config.save_epoch == 0:
+            checkpoint = {
+                'model': parallel_model.state_dict(),
+                'optimizer':optimizer.state_dict(),
+                'amp':amp.state_dict()
+            }
+            torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
+        
         # dev
         if (i+1) % Config.dev_step == 0:
             with torch.no_grad():
@@ -137,14 +147,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 print("---------------------------------------------------------------------------------------------------")
                 #clean gpu memory cache
                 torch.cuda.empty_cache()
-        # save model     
-        if (i+1) % Config.save_epoch == 0:
-            checkpoint = {
-                'model': parallel_model.state_dict(),
-                'optimizer':optimizer.state_dict(),
-                'amp':amp.state_dict()
-            }
-            torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
     # after iterator, save the best perfomance
     log(bagTest.auc, bagTest.epoch)
 
