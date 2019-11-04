@@ -64,11 +64,11 @@ class Selector(nn.Module):
                 # gumbal_logit  `(batch_size, rel_num)`
                 # rel_mat `(hidden_size, rel_num)`
                 latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
-                return bag_logit, latent
+                return bag_logit
             else:
                 logit = self.__logit__(x)
                 # mask NA relation embedding because it give no infomation for decoder
-                gumbal_logit = self.gumbal_softmax(logit, Config.gumbel_temperature) # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                gumbal_logit = self.gumbal_softmax(logit, Config.gumbel_temperature) * self.na_mask# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
                 return logit, latent
         else:
