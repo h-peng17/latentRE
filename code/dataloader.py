@@ -219,12 +219,21 @@ class Dataloader:
                     head_pos = gpt2_tokens.index('Ġ'+head_tokens[0])
                 except:
                     print("error 1!!")
-                    head_pos = gpt2_tokens.index(head_tokens[0])
+                    try:
+                        head_pos = gpt2_tokens.index(head_tokens[0])
+                    except:
+                        head_pos = 0
+                        print("error 3!!!")
                 try:
                     tail_pos = gpt2_tokens.index('Ġ'+tail_tokens[0])
                 except:
                     print("error 2!!")
-                    tail_pos = gpt2_tokens.index(tail_tokens[0])
+                    try:
+                        tail_pos = gpt2_tokens.index(tail_tokens[0])
+                    except:
+                        tail_pos = 0
+                        print("error 4!!!")
+
                 length = min(len(gpt2_tokens), Config.sen_len)
                 self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(gpt2_tokens[0:length])
                 self.data_decoder_attention_mask[i][0:length] = 1
