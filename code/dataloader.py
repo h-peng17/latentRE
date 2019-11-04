@@ -212,15 +212,21 @@ class Dataloader:
                 self.data_attention_mask[i][0:length] = 1
                 self.data_length[i] = length                
                 # for mask
-                bert_tokens = gpt2_tokenizer.tokenize(sentence)
+                gpt2_tokens = gpt2_tokenizer.tokenize(sentence)
                 head_tokens = gpt2_tokenizer.tokenize(head)
                 tail_tokens = gpt2_tokenizer.tokenize(tail)
-                bert_tokens.insert(0, "[CLS]")
-                bert_tokens.append("[SEP]")
-                head_pos = bert_tokens.index(head_tokens[0])
-                tail_pos = bert_tokens.index(tail_tokens[0])
-                length = min(len(bert_tokens), Config.sen_len)
-                self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
+                try:
+                    head_pos = gpt2_tokens.index('Ġ'+head_tokens[0])
+                except:
+                    print("error 1!!")
+                    head_pos = gpt2_tokens.index(head_tokens[0])
+                try:
+                    tail_pos = gpt2_tokens.index('Ġ'+tail_tokens[0])
+                except:
+                    print("error 2!!")
+                    tail_pos = gpt2_tokens.index(tail_tokens[0])
+                length = min(len(gpt2_tokens), Config.sen_len)
+                self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(gpt2_tokens[0:length])
                 self.data_decoder_attention_mask[i][0:length] = 1
                 self.data_token_mask[i][head_pos:head_pos+len(head_tokens)] = 0
                 self.data_token_mask[i][tail_pos:tail_pos+len(tail_tokens)] = 0
@@ -350,8 +356,8 @@ class Dataloader:
                          self.to_tensor(self.data_mask[index][:, :max_length]), \
                           self.to_tensor(self.data_query[index]), \
                            self.to_tensor(self.data_knowledge[index]), \
-                            self.to_tensor(self.data_decoder_input_ids[index][:, :max_length]), \
-                             self.to_tensor(self.data_decoder_attention_mask[index][:, :max_length])
+                            self.to_tensor(self.data_decoder_input_ids[index]), \
+                             self.to_tensor(self.data_decoder_attention_mask[index])
             else:
                 return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
                         self.to_tensor(self.data_attention_mask[index][:, :max_length])
