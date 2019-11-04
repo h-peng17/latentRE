@@ -44,7 +44,7 @@ class Selector(nn.Module):
 
         """for mask na relation embedding"""
         random.seed(Config.seed)
-        torch.manual_seed(args.seed)
+        torch.manual_seed(Config.seed)
         self.na_mask = nn.Parameter(torch.ones(Config.rel_num), requires_grad=False)
         self.na_mask[0] = 0
         
@@ -77,11 +77,11 @@ class Selector(nn.Module):
                 
                 # add negative sample 
                 # `(batch)`
-                pos_list = torch.argmax(logit, 1)
-                neg_list = (torch.randint(1, 53, (pos_list.size()[0],)) + pos_list) % 53
-                neg_latent = self.rel_mat.transpose(0,1)[neg_list]
+                # pos_list = torch.argmax(logit, 1)
+                # neg_list = (torch.randint(1, 53, (pos_list.size()[0],), device=torch.cuda) + pos_list) % 53
+                # neg_latent = self.rel_mat.transpose(0,1)[neg_list]
 
-                return logit, latent, neg_latent
+                return logit, latent
         else:
             if Config.eval_bag:
                 bag_logit = []
