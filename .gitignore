@@ -4,3 +4,6 @@ data/*
 visualizing/*
 demo.py
 102.sh
+*.sbatch
+bash/
+res/
