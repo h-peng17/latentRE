@@ -121,11 +121,10 @@ class Dataloader:
             self.data_input_ids = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_attention_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             # for decoder
-            # self.data_decoder_input_ids = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
-            # self.data_decoder_attention_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
+            self.data_decoder_input_ids = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
+            self.data_decoder_attention_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_token_mask = np.ones((self.instance_tot, Config.sen_len), dtype=int)
             self.data_between_entity_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
-            # self.data_governor_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
 
             def _process_loop(i):
                 instance = data[i]
@@ -212,16 +211,16 @@ class Dataloader:
                 self.data_attention_mask[i][0:length] = 1
                 self.data_length[i] = length                
                 # for mask
-                # bert_tokens = tokenizer.tokenize(sentence)
-                # bert_tokens.insert(0, "[CLS]")
-                # bert_tokens.append("[SEP]")
-                # length = min(len(bert_tokens), Config.sen_len)
-                # self.data_decoder_input_ids[i][0:length] = tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
-                # self.data_decoder_attention_mask[i][0:length] = 1
+                bert_tokens = tokenizer.tokenize(sentence)
+                bert_tokens.insert(0, "[CLS]")
+                bert_tokens.append("[SEP]")
                 head_pos = bert_tokens.index(head_tokens[0])
                 tail_pos = bert_tokens.index(tail_tokens[0])
-                self.data_token_mask[i][head_pos-1:head_pos+len(head_tokens)+1] = 0
-                self.data_token_mask[i][tail_pos-1:tail_pos+len(tail_tokens)+1] = 0
+                length = min(len(bert_tokens), Config.sen_len)
+                self.data_decoder_input_ids[i][0:length] = tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
+                self.data_decoder_attention_mask[i][0:length] = 1
+                self.data_token_mask[i][head_pos:head_pos+len(head_tokens)] = 0
+                self.data_token_mask[i][tail_pos:tail_pos+len(tail_tokens)] = 0
                 if head_pos < tail_pos:
                     fir_pos = head_pos
                     sec_pos = tail_pos
@@ -230,7 +229,7 @@ class Dataloader:
                     fir_pos = tail_pos
                     sec_pos = head_pos
                     len_fir = len(tail_tokens)
-                self.data_between_entity_mask[i][fir_pos+len_fir+1:sec_pos-1] = 1
+                self.data_between_entity_mask[i][fir_pos+len_fir:sec_pos] = 1
 
                 # knowledge 
                 entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
@@ -260,8 +259,8 @@ class Dataloader:
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy"), self.data_knowledge)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_input_ids.npy"), self.data_input_ids)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_attention_mask.npy"), self.data_attention_mask)
-            # np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_input_ids.npy"), self.data_decoder_input_ids)
-            # np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_attention_mask.npy"), self.data_decoder_attention_mask)
+            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_input_ids.npy"), self.data_decoder_input_ids)
+            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_attention_mask.npy"), self.data_decoder_attention_mask)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"), self.data_token_mask)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_between_entity_mask.npy"), self.data_between_entity_mask) 
             json.dump(self.entpair2scope, open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json"), 'w'))
@@ -281,8 +280,8 @@ class Dataloader:
             self.data_knowledge = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy"))
             self.data_input_ids = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_input_ids.npy"))
             self.data_attention_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_attention_mask.npy"))
-            # self.data_decoder_input_ids = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_input_ids.npy"))
-            # self.data_decoder_attention_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_attention_mask.npy"))
+            self.data_decoder_input_ids = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_input_ids.npy"))
+            self.data_decoder_attention_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_attention_mask.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json")))
             self.relfact2scope = json.load(open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_relfact2scope.json")))
             # Config.word_embeeding_dim = len(self.word_vec[0])
@@ -348,8 +347,8 @@ class Dataloader:
                          self.to_tensor(self.data_mask[index][:, :max_length]), \
                           self.to_tensor(self.data_query[index]), \
                            self.to_tensor(self.data_knowledge[index])
-                            # self.to_tensor(self.data_decoder_input_ids[index][:, :max_length]), \
-                            #  self.to_tensor(self.data_decoder_attention_mask[index][:, :max_length])
+                            self.to_tensor(self.data_decoder_input_ids[index][:, :max_length]), \
+                             self.to_tensor(self.data_decoder_attention_mask[index][:, :max_length])
             else:
                 return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
                         self.to_tensor(self.data_attention_mask[index][:, :max_length])
