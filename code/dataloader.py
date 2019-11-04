@@ -213,8 +213,8 @@ class Dataloader:
                 self.data_length[i] = length                
                 # for mask
                 gpt2_tokens = gpt2_tokenizer.tokenize(sentence)
-                head_tokens = gpt2_tokenizer.tokenize(head)
-                tail_tokens = gpt2_tokenizer.tokenize(tail)
+                head_tokens = head.split()
+                tail_tokens = tail.split()
                 try:
                     head_pos = gpt2_tokens.index('Ġ'+head_tokens[0])
                 except:
