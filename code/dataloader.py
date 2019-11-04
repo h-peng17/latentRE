@@ -229,24 +229,44 @@ class Dataloader:
                     sentence += ' '
                 gpt2_tokens = gpt2_tokenizer.tokenize(sentence)
                 # try:
-                head_pos = gpt2_tokens.index("Ġ#")
-                tail_pos = gpt2_tokens.index("Ġ^")
+                token1 = "Ġ#"
+                token2 = "Ġ*"
+                token3 = "Ġ^"
+                token4 = "Ġ`"
+                try:
+                    gpt2_tokens.index(token1)
+                except:
+                    token1 = "#"
+                try:
+                    gpt2_tokens.index(token2)
+                except:
+                    token2 = '*'
+                try:
+                    gpt2_tokens.index(token3)
+                except:
+                    token3 = '^'
+                try:
+                    gpt2_tokens.index(token4)
+                except:
+                    token4 = '`'
+                head_pos = gpt2_tokens.index(token1)
+                tail_pos = gpt2_tokens.index(token3)
                 if head_pos < tail_pos:
-                    len_head = gpt2_tokens.index("Ġ*") - 1 - head_pos
-                    gpt2_tokens.remove("Ġ#")
-                    gpt2_tokens.remove("Ġ*")
-                    tail_pos = gpt2_tokens.index("Ġ^")
-                    len_tail = gpt2_tokens.index("Ġ`") - 1 - tail_pos
-                    gpt2_tokens.remove("Ġ^")
-                    gpt2_tokens.remove("Ġ`")
+                    len_head = gpt2_tokens.index(token2) - 1 - head_pos
+                    gpt2_tokens.remove(token1)
+                    gpt2_tokens.remove(token2)
+                    tail_pos = gpt2_tokens.index(token3)
+                    len_tail = gpt2_tokens.index(token4) - 1 - tail_pos
+                    gpt2_tokens.remove(token3)
+                    gpt2_tokens.remove(token4)
                 else:
-                    len_tail = gpt2_tokens.index("Ġ`") - 1 - tail_pos
-                    gpt2_tokens.remove("Ġ^")
-                    gpt2_tokens.remove("Ġ`")
-                    head_pos = gpt2_tokens.index("Ġ#")
-                    len_head = gpt2_tokens.index("Ġ*") - 1 - head_pos
-                    gpt2_tokens.remove("Ġ#")
-                    gpt2_tokens.remove("Ġ*")
+                    len_tail = gpt2_tokens.index(token4) - 1 - tail_pos
+                    gpt2_tokens.remove(token3)
+                    gpt2_tokens.remove(token4)
+                    head_pos = gpt2_tokens.index(token1)
+                    len_head = gpt2_tokens.index(token2) - 1 - head_pos
+                    gpt2_tokens.remove(token1)
+                    gpt2_tokens.remove(token2)
                 # except:
                 #     print("error")
                 #     return
