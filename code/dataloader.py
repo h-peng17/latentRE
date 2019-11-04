@@ -228,28 +228,28 @@ class Dataloader:
                     sentence += word
                     sentence += ' '
                 gpt2_tokens = gpt2_tokenizer.tokenize(sentence)
-                try:
-                    head_pos = gpt2_tokens.index("Ġ#")
+                # try:
+                head_pos = gpt2_tokens.index("Ġ#")
+                tail_pos = gpt2_tokens.index("Ġ^")
+                if head_pos < tail_pos:
+                    len_head = gpt2_tokens.index("Ġ*") - 1 - head_pos
+                    gpt2_tokens.remove("Ġ#")
+                    gpt2_tokens.remove("Ġ*")
                     tail_pos = gpt2_tokens.index("Ġ^")
-                    if head_pos < tail_pos:
-                        len_head = gpt2_tokens.index("Ġ*") - 1 - head_pos
-                        gpt2_tokens.remove("Ġ#")
-                        gpt2_tokens.remove("Ġ*")
-                        tail_pos = gpt2_tokens.index("Ġ^")
-                        len_tail = gpt2_tokens.index("Ġ`") - 1 - tail_pos
-                        gpt2_tokens.remove("Ġ^")
-                        gpt2_tokens.remove("Ġ`")
-                    else:
-                        len_tail = gpt2_tokens.index("Ġ`") - 1 - tail_pos
-                        gpt2_tokens.remove("Ġ^")
-                        gpt2_tokens.remove("Ġ`")
-                        head_pos = gpt2_tokens.index("Ġ#")
-                        len_head = gpt2_tokens.index("Ġ*") - 1 - head_pos
-                        gpt2_tokens.remove("Ġ#")
-                        gpt2_tokens.remove("Ġ*")
-                except:
-                    print("error")
-                    return
+                    len_tail = gpt2_tokens.index("Ġ`") - 1 - tail_pos
+                    gpt2_tokens.remove("Ġ^")
+                    gpt2_tokens.remove("Ġ`")
+                else:
+                    len_tail = gpt2_tokens.index("Ġ`") - 1 - tail_pos
+                    gpt2_tokens.remove("Ġ^")
+                    gpt2_tokens.remove("Ġ`")
+                    head_pos = gpt2_tokens.index("Ġ#")
+                    len_head = gpt2_tokens.index("Ġ*") - 1 - head_pos
+                    gpt2_tokens.remove("Ġ#")
+                    gpt2_tokens.remove("Ġ*")
+                # except:
+                #     print("error")
+                #     return
                 length = min(len(gpt2_tokens), Config.sen_len)
                 self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(gpt2_tokens[0:length])
                 self.data_decoder_attention_mask[i][0:length] = 1
