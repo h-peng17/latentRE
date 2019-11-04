@@ -10,7 +10,7 @@ import random
 import pdb
 import time
 from config import Config
-from transformers import BertTokenizer
+from transformers import BertTokenizer, GPT2Tokenizer
 import multiprocessing.dummy as mp 
 from torch import utils
 import torch
@@ -62,7 +62,8 @@ class Dataloader:
             Config.word_tot = len(ori_word_vec) + 2
 
             # Bert tokenizer
-            tokenizer = BertTokenizer.from_pretrained(Config.model_name_or_path, do_lower_case=True)
+            bert_tokenizer = BertTokenizer.from_pretrained(Config.model_name_or_path, do_lower_case=True)
+            gpt2_tokenizer = GPT2Tokenizer.from_pretrained(Config.gpt2, do_lower_case=True)
 
             # process word vec
             word2id = {}
@@ -195,9 +196,9 @@ class Dataloader:
                 #     self.data_pos2[i][j] = j - pos2 + Config.sen_len
                 
                 # for bert encoder
-                bert_tokens = tokenizer.tokenize(sentence)
-                head_tokens = tokenizer.tokenize(head)
-                tail_tokens = tokenizer.tokenize(tail)
+                bert_tokens = bert_tokenizer.tokenize(sentence)
+                head_tokens = bert_tokenizer.tokenize(head)
+                tail_tokens = bert_tokenizer.tokenize(tail)
                 head_pos = bert_tokens.index(head_tokens[0])
                 bert_tokens.insert(head_pos, "[unused0]")
                 bert_tokens.insert(head_pos+len(head_tokens)+1, "[unused1]")
@@ -207,17 +208,19 @@ class Dataloader:
                 bert_tokens.insert(0, "[CLS]")
                 bert_tokens.append("[SEP]")
                 length = min(len(bert_tokens), Config.sen_len)
-                self.data_input_ids[i][0:length] = tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
+                self.data_input_ids[i][0:length] = bert_tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
                 self.data_attention_mask[i][0:length] = 1
                 self.data_length[i] = length                
                 # for mask
-                bert_tokens = tokenizer.tokenize(sentence)
+                bert_tokens = gpt2_tokenizer.tokenize(sentence)
+                head_tokens = gpt2_tokenizer.tokenize(head)
+                tail_tokens = gpt2_tokenizer.tokenize(tail)
                 bert_tokens.insert(0, "[CLS]")
                 bert_tokens.append("[SEP]")
                 head_pos = bert_tokens.index(head_tokens[0])
                 tail_pos = bert_tokens.index(tail_tokens[0])
                 length = min(len(bert_tokens), Config.sen_len)
-                self.data_decoder_input_ids[i][0:length] = tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
+                self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
                 self.data_decoder_attention_mask[i][0:length] = 1
                 self.data_token_mask[i][head_pos:head_pos+len(head_tokens)] = 0
                 self.data_token_mask[i][tail_pos:tail_pos+len(tail_tokens)] = 0

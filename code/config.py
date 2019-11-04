@@ -38,11 +38,11 @@ class Config():
     # bert
     model_type = 'bert'
     model_name_or_path = "bert-base-uncased"
+    gpt2 = "gpt2"
     gumbel_temperature = 0.5 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     mlm_probability = 0.15
     mask_mode = "none"
     seed = 42
-
 
     # for pre test
     latent = False
