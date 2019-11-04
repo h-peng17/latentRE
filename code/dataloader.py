@@ -129,9 +129,9 @@ class Dataloader:
 
             def _process_loop(i):
                 instance = data[i]
-                head = instance["head"]["word"]
-                tail = instance["tail"]["word"]
-                sentence = instance["sentence"]
+                head = instance["head"]["word"].lower()
+                tail = instance["tail"]["word"].lower()
+                sentence = instance["sentence"].lower()
                 try:
                     self.data_query[i] = rel2id[instance["relation"]]
                 except:
@@ -212,41 +212,57 @@ class Dataloader:
                 self.data_attention_mask[i][0:length] = 1
                 self.data_length[i] = length                
                 # for mask
-                gpt2_tokens = gpt2_tokenizer.tokenize(sentence)
+                # head_tokens = head.split()
+                # tail_tokens = tail.split()
+                words = sentence.split()
                 head_tokens = head.split()
                 tail_tokens = tail.split()
+                head_pos = words.index(head_tokens[0])
+                words.insert(head_pos, "#")
+                words.insert(head_pos+len(head_tokens)+1, "*")
+                tail_pos = words.index(tail_tokens[0])
+                words.insert(tail_pos, "^")
+                words.insert(tail_pos+len(tail_tokens)+1, "`")
+                sentence = ''
+                for word in words:
+                    sentence += word
+                    sentence += ' '
+                gpt2_tokens = gpt2_tokenizer.tokenize(sentence)
                 try:
-                    head_pos = gpt2_tokens.index('Ġ'+head_tokens[0])
+                    head_pos = gpt2_tokens.index("Ġ#")
+                    tail_pos = gpt2_tokens.index("Ġ^")
+                    if head_pos < tail_pos:
+                        len_head = gpt2_tokens.index("Ġ*") - 1 - head_pos
+                        gpt2_tokens.remove("Ġ#")
+                        gpt2_tokens.remove("Ġ*")
+                        tail_pos = gpt2_tokens.index("Ġ^")
+                        len_tail = gpt2_tokens.index("Ġ`") - 1 - tail_pos
+                        gpt2_tokens.remove("Ġ^")
+                        gpt2_tokens.remove("Ġ`")
+                    else:
+                        len_tail = gpt2_tokens.index("Ġ`") - 1 - tail_pos
+                        gpt2_tokens.remove("Ġ^")
+                        gpt2_tokens.remove("Ġ`")
+                        head_pos = gpt2_tokens.index("Ġ#")
+                        len_head = gpt2_tokens.index("Ġ*") - 1 - head_pos
+                        gpt2_tokens.remove("Ġ#")
+                        gpt2_tokens.remove("Ġ*")
                 except:
-                    print("error 1!!")
-                    try:
-                        head_pos = gpt2_tokens.index(head_tokens[0])
-                    except:
-                        head_pos = 0
-                        print("error 3!!!")
-                try:
-                    tail_pos = gpt2_tokens.index('Ġ'+tail_tokens[0])
-                except:
-                    print("error 2!!")
-                    try:
-                        tail_pos = gpt2_tokens.index(tail_tokens[0])
-                    except:
-                        tail_pos = 0
-                        print("error 4!!!")
-
+                    print("error")
+                    return
                 length = min(len(gpt2_tokens), Config.sen_len)
                 self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(gpt2_tokens[0:length])
                 self.data_decoder_attention_mask[i][0:length] = 1
-                self.data_token_mask[i][head_pos:head_pos+len(head_tokens)] = 0
-                self.data_token_mask[i][tail_pos:tail_pos+len(tail_tokens)] = 0
+                self.data_token_mask[i][head_pos:head_pos+len_head] = 0
+                self.data_token_mask[i][tail_pos:tail_pos+len_tail] = 0
                 if head_pos < tail_pos:
                     fir_pos = head_pos
                     sec_pos = tail_pos
-                    len_fir = len(head_tokens)
+                    len_fir = len_head
                 else:
                     fir_pos = tail_pos
                     sec_pos = head_pos
-                    len_fir = len(tail_tokens)
+                    len_fir = len_tail
                 self.data_between_entity_mask[i][fir_pos+len_fir:sec_pos] = 1
 
                 # knowledge 
@@ -264,7 +280,7 @@ class Dataloader:
                 # self.data_knowledge[i][0] += na_prop
 
             print("begin multiple thread processing...")
-            pool = mp.Pool(12)
+            pool = mp.Pool(40)
             pool.map(_process_loop, range(0, self.instance_tot))
 
             # save array
