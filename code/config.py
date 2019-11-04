@@ -41,6 +41,7 @@ class Config():
     gumbel_temperature = 0.5 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     mlm_probability = 0.15
     mask_mode = "none"
+    seed = 42
 
 
     # for pre test

@@ -5,6 +5,7 @@ import torch
 import pdb 
 import torch.nn as nn
 import torch.nn.functional as F 
+import random
 from torch.autograd import Variable
 from config import Config
 
@@ -42,8 +43,11 @@ class Selector(nn.Module):
         self.gumbal_softmax = GumbalSoftmax()
 
         """for mask na relation embedding"""
+        random.seed(Config.seed)
+        torch.manual_seed(args.seed)
         self.na_mask = nn.Parameter(torch.ones(Config.rel_num), requires_grad=False)
         self.na_mask[0] = 0
+        
     
     def __logit__(self, x):
         return torch.matmul(x, self.rel_mat) + self.bias
@@ -70,7 +74,14 @@ class Selector(nn.Module):
                 # mask NA relation embedding because it give no infomation for decoder
                 gumbal_logit = self.gumbal_softmax(logit, Config.gumbel_temperature) * self.na_mask# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
-                return logit, latent
+                
+                # add negative sample 
+                # `(batch)`
+                pos_list = torch.argmax(logit, 1)
+                neg_list = (torch.randint(1, 53, (pos_list.size()[0],)) + pos_list) % 53
+                neg_latent = self.rel_mat.transpose(0,1)[neg_list]
+
+                return logit, latent, neg_latent
         else:
             if Config.eval_bag:
                 bag_logit = []

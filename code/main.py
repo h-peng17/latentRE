@@ -247,6 +247,7 @@ if __name__ == "__main__":
     Config.dev_step = args.dev_step
     Config.save_epoch = args.save_epoch
     Config.dataset = args.dataset
+    Config.seed = args.seed 
     print(args)
 
     # set save path
