@@ -1,5 +1,4 @@
 ckpt/*
-!ckpt/*.png
 data/*
 visualizing/*
 demo.py
@@ -7,3 +6,4 @@ demo.py
 *.sbatch
 bash/
 res/
+output/
