@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F 
 import numpy as np 
 from config import Config
-from transformers import (WEIGHTS_NAME, BertConfig, BertForMaskedLM, BertTokenizer
+from transformers import (WEIGHTS_NAME, BertConfig, BertForMaskedLM, BertTokenizer, \
                                         GPT2Config, GPT2LMHeadModel, GPT2Tokenizer)
 
 
