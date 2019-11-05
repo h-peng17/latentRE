@@ -42,7 +42,7 @@ class Dataloader:
     # This class 
     '''
     def __init__(self, mode, flag, dataset):    
-        np.random.seed(args.seed)
+        np.random.seed(Config.seed)
         self.mode = mode
         if not os.path.exists("../data/pre_processed_data"):
             os.mkdir("../data/pre_processed_data")
