@@ -21,7 +21,6 @@ class LatentRE(nn.Module):
         self.encoder = Bert()
         self.selector = Selector()
         self.decoder = BertDecoder()
-        # self.decoder = GPT2Decoder()
         self.loss = Loss(weight)
         
     def forward(self, 

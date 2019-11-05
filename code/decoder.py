@@ -18,6 +18,9 @@ class BertDecoder(nn.Module):
             'bert': (BertConfig, BertForMaskedLM, BertTokenizer),
         }
 
+        # set seed
+        torch.manual_seed(Config.seed)
+
         # load pretrained model
         config_class, model_class, tokenizer_class = self.MODEL_CLASSES[Config.model_type]
         config = config_class.from_pretrained(Config.model_name_or_path)
