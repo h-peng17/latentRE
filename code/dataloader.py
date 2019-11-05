@@ -212,8 +212,6 @@ class Dataloader:
                 self.data_attention_mask[i][0:length] = 1
                 self.data_length[i] = length                
                 # for mask
-                # head_tokens = head.split()
-                # tail_tokens = tail.split()
                 words = sentence.split()
                 head_tokens = head.split()
                 tail_tokens = tail.split()

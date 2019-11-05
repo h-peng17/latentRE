@@ -10,7 +10,7 @@ from config import Config
 from textRepre import TextRepre
 from selector import Selector
 from loss import Loss
-from decoder import BertDecoder
+from decoder import BertDecoder, GPT2Decoder
 from encoder import Bert
 import time
 
@@ -18,12 +18,11 @@ import time
 class LatentRE(nn.Module):
     def __init__(self, word_vec, weight=None):
         super(LatentRE, self).__init__()
-        # self.textRepre = TextRepre(word_vec)
         self.encoder = Bert()
         self.selector = Selector()
-        self.decoder = BertDecoder()
+        #self.decoder = BertDecoder()
+        self.decoder = GPT2Decoder()
         self.loss = Loss(weight)
-        # self.decoder_margin = BertDecoder()
         
     def forward(self, 
                   word=None,
@@ -45,10 +44,7 @@ class LatentRE(nn.Module):
             kl_loss = self.loss.kl_loss(logit, knowledge)
             if Config.latent:
                 gen_loss = self.decoder(decoder_input_ids, decoder_attention_mask, mask, latent)
-                # margin_gen_loss = self.decoder_margin(decoder_input_ids, decoder_attention_mask, mask, neg_latent)
-                # loss = kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale - margin_gen_loss + 4.0
-                # return torch.nn.functional.relu(loss)
-                return kl_loss + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale
+                return kl_loss + gen_loss * Config.gen_loss_scale
             else:
                 return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
         else:
