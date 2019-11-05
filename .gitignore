@@ -1,4 +1,5 @@
 ckpt/*
+!chpt/*.png
 data/*
 visualizing/*
 demo.py
