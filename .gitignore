@@ -1,6 +1,10 @@
 ckpt/*
-!ckpt/*.png
+!chpt/*.png
 data/*
 visualizing/*
 demo.py
 102.sh
+*.sbatch
+bash/
+res/
+output/
