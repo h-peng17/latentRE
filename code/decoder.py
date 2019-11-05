@@ -100,10 +100,9 @@ class BertDecoder(nn.Module):
            latent shape is `(batch_size, hidden_size)`
            label shape is `(batch_size, hidden_size)`
         """        
-        # pdb.set_trace()
         mask_func = self.MASK_MODE[Config.mask_mode]
-        # mask = mask if Config.mask_mode in ["entity", 'governor', 'between', 'origin'] else attention_mask
         input_ids, labels = mask_func(input_ids, self.tokenizer, mask)
+        pdb.set_trace()
 
         inputs = {
             'input_ids':input_ids,
