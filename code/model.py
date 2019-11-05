@@ -43,7 +43,7 @@ class LatentRE(nn.Module):
             kl_loss = self.loss.kl_loss(logit, knowledge)
             if Config.latent:
                 gen_loss = self.decoder(decoder_input_ids, decoder_attention_mask, mask, latent)
-                return kl_loss + gen_loss * Config.gen_loss_scale
+                return ce_loss + gen_loss * Config.gen_loss_scale # !!!!!!
             else:
                 return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
         else:
