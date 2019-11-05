@@ -64,7 +64,7 @@ class Dataloader:
 
             # Bert tokenizer
             bert_tokenizer = BertTokenizer.from_pretrained(Config.model_name_or_path, do_lower_case=True)
-            # gpt2_tokenizer = GPT2Tokenizer.from_pretrained(Config.gpt2, do_lower_case=True)
+            gpt2_tokenizer = GPT2Tokenizer.from_pretrained(Config.gpt2, do_lower_case=True)
 
             # process word vec
             word2id = {}
@@ -152,19 +152,62 @@ class Dataloader:
                 self.data_input_ids[i][0:length] = bert_tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
                 self.data_attention_mask[i][0:length] = 1
                 self.data_length[i] = length                
+                
                 # for mask 
-                # bert_tokens = bert_tokenizer.tokenize(sentence)
-                # bert_tokens.insert(0, "[CLS]")
-                # bert_tokens.append("[SEP]")
-                len_head = len(head_tokens)
-                len_tail = len(tail_tokens)
-                head_pos = bert_tokens.index(head_tokens[0])
-                tail_pos = bert_tokens.index(tail_tokens[0])
-                length = min(len(bert_tokens), Config.sen_len)
-                # self.data_decoder_input_ids[i][0:length] = bert_tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
-                # self.data_decoder_attention_mask[i][0:length] = 1
-                self.data_token_mask[i][head_pos-1:head_pos+len_head] = 0
-                self.data_token_mask[i][tail_pos-1:tail_pos+len_tail] = 0
+                words = sentence.split()
+                head_tokens = head.split()
+                tail_tokens = tail.split()
+                head_pos = words.index(head_tokens[0])
+                words.insert(head_pos, "#")
+                words.insert(head_pos+len(head_tokens)+1, "*")
+                tail_pos = words.index(tail_tokens[0])
+                words.insert(tail_pos, "^")
+                words.insert(tail_pos+len(tail_tokens)+1, "`")
+                sentence = ''
+                for word in words:
+                    sentence += word
+                    sentence += ' '
+                gpt2_tokens = gpt2_tokenizer.tokenize(sentence)
+                # try:
+                token1 = "Ġ#"
+                token2 = "Ġ*"
+                token3 = "Ġ^"
+                token4 = "Ġ`"
+                try:
+                    gpt2_tokens.index(token1)
+                except:
+                    token1 = "#"
+                try:
+                    gpt2_tokens.index(token2)
+                except:
+                    token2 = '*'
+                try:
+                    gpt2_tokens.index(token3)
+                except:
+                    token3 = '^'
+                try:
+                    gpt2_tokens.index(token4)
+                except:
+                    token4 = '`'
+                head_pos = gpt2_tokens.index(token1)
+                tail_pos = gpt2_tokens.index(token3)
+                if head_pos < tail_pos:
+                    len_head = gpt2_tokens.index(token2) - 1 - head_pos
+                    gpt2_tokens.remove(token1)
+                    gpt2_tokens.remove(token2)
+                    tail_pos = gpt2_tokens.index(token3)
+                    len_tail = gpt2_tokens.index(token4) - 1 - tail_pos
+                    gpt2_tokens.remove(token3)
+                    gpt2_tokens.remove(token4)
+                else:
+                    len_tail = gpt2_tokens.index(token4) - 1 - tail_pos
+                    gpt2_tokens.remove(token3)
+                    gpt2_tokens.remove(token4)
+                    head_pos = gpt2_tokens.index(token1)
+                    len_head = gpt2_tokens.index(token2) - 1 - head_pos
+                    gpt2_tokens.remove(token1)
+                    gpt2_tokens.remove(token2)
+                length = min(len(gpt2_tokens), Config.sen_len)
                 if head_pos < tail_pos:
                     fir_pos = head_pos
                     sec_pos = tail_pos
@@ -173,7 +216,14 @@ class Dataloader:
                     fir_pos = tail_pos
                     sec_pos = head_pos
                     len_fir = len_tail
-                self.data_between_entity_mask[i][fir_pos+len_fir:sec_pos-1] = 1
+                gpt2_tokens_final = []
+                gpt2_tokens_final.extend(gpt2_tokens[sec_pos:length])
+                gpt2_tokens_final.extend(gpt2_tokens[0:sec_pos])
+                self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(gpt2_tokens_final[0:length])
+                self.data_decoder_attention_mask[i][0:length] = 1
+                # self.data_token_mask[i][head_pos-1:head_pos+len_head] = 0
+                # self.data_token_mask[i][tail_pos-1:tail_pos+len_tail] = 0
+                self.data_between_entity_mask[i][fir_pos+len_fir+length-sec_pos:length] = 1
 
                 # knowledge 
                 entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
@@ -279,9 +329,9 @@ class Dataloader:
                         self.to_tensor(self.data_attention_mask[index][:, :max_length]), \
                          self.to_tensor(self.data_mask[index][:, :max_length]), \
                           self.to_tensor(self.data_query[index]), \
-                           self.to_tensor(self.data_knowledge[index])
-                            # self.to_tensor(self.data_decoder_input_ids[index][:, :max_length]), \
-                            #  self.to_tensor(self.data_decoder_attention_mask[index][:, :max_length])
+                           self.to_tensor(self.data_knowledge[index]), \
+                            self.to_tensor(self.data_decoder_input_ids[index]), \
+                             self.to_tensor(self.data_decoder_attention_mask[index])
             else:
                 return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
                         self.to_tensor(self.data_attention_mask[index][:, :max_length])

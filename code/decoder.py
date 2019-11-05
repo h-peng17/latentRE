@@ -136,7 +136,6 @@ class GPT2Decoder(nn.Module):
             "entity": self.mask_not_entity_tokens,
             "between": self.mask_between_entity,
             "governor": self.governor_mask,
-            # "none": self.not_mask,
             "origin":self.mask_tokens
         }
 
