@@ -20,8 +20,8 @@ class LatentRE(nn.Module):
         super(LatentRE, self).__init__()
         self.encoder = Bert()
         self.selector = Selector()
-        #self.decoder = BertDecoder()
-        self.decoder = GPT2Decoder()
+        self.decoder = BertDecoder()
+        # self.decoder = GPT2Decoder()
         self.loss = Loss(weight)
         
     def forward(self, 
