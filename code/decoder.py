@@ -102,7 +102,6 @@ class BertDecoder(nn.Module):
         """        
         mask_func = self.MASK_MODE[Config.mask_mode]
         input_ids, labels = mask_func(input_ids, self.tokenizer, mask)
-        pdb.set_trace()
 
         inputs = {
             'input_ids':input_ids,
