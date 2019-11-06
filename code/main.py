@@ -110,9 +110,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 scaled_loss.backward()
             nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
                       
-            final_input_words.append(batch_data[5].tolist())
-            final_mask_words.append(batch_data[2].tolist())
-            final_pre_words.append(pre_words.cpu().detach().numpy().tolist())
+            # final_input_words.append(batch_data[5].tolist())
+            # final_mask_words.append(batch_data[2].tolist())
+            # final_pre_words.append(pre_words.cpu().detach().numpy().tolist())
             
             optimizer.step()
             scheduler.step()
@@ -121,9 +121,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             # sys.stdout.write("epoch: %d, step: %d, loss: %.6f\r" % (i, global_step, loss))
             # sys.stdout.flush()
         print("")
-        json.dump(final_input_words, open("../output/"+Config.info+"input_words.npy", 'w'))
-        json.dump(final_mask_words, open("../output/"+Config.info+"mask.npy", 'w'))
-        json.dump(final_pre_words, open("../output/"+Config.info+"pre_words.npy", 'w'))
+        # json.dump(final_input_words, open("../output/"+Config.info+"input_words.npy", 'w'))
+        # json.dump(final_mask_words, open("../output/"+Config.info+"mask.npy", 'w'))
+        # json.dump(final_pre_words, open("../output/"+Config.info+"pre_words.npy", 'w'))
         # clean gpu memory cache
         torch.cuda.empty_cache()
         
