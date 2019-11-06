@@ -102,7 +102,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'knowledge':batch_data[4].cuda().float(),
                 'decoder_input_ids':batch_data[5].cuda(),
                 'decoder_attention_mask':batch_data[6].cuda(),
-                'labels':batch_data[7].cuda()
             }        
             loss = parallel_model(**inputs)
             loss = loss.mean()

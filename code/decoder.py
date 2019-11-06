@@ -108,54 +108,54 @@ class BertDecoder(nn.Module):
 
         inputs = {
             'input_ids':input_ids,
-            'latent':latent,
-            'mask':mask,
             'attention_mask':attention_mask,
+            'mask':mask,
+            'latent':latent,
             'masked_lm_labels':labels
         }
         ouputs = self.model(**inputs)
         loss = ouputs[0]
         return loss
         
-class GPT2Decoder(nn.Module):
-    def __init__(self):
-        super(GPT2Decoder, self).__init__()
+# class GPT2Decoder(nn.Module):
+#     def __init__(self):
+#         super(GPT2Decoder, self).__init__()
         
-        # pre-train model dict
-        self.MODEL_CLASSES = {
-            'gpt2': (GPT2Config, GPT2LMHeadModel, GPT2Tokenizer),
-        }
+#         # pre-train model dict
+#         self.MODEL_CLASSES = {
+#             'gpt2': (GPT2Config, GPT2LMHeadModel, GPT2Tokenizer),
+#         }
 
-        # load pretrained model
-        config_class, model_class, tokenizer_class = self.MODEL_CLASSES["gpt2"]
-        config = config_class.from_pretrained(Config.gpt2)
-        self.tokenizer = tokenizer_class.from_pretrained(Config.gpt2)
-        self.model = model_class.from_pretrained(Config.gpt2, from_tf=bool('.ckpt' in Config.gpt2), config=config)
+#         # load pretrained model
+#         config_class, model_class, tokenizer_class = self.MODEL_CLASSES["gpt2"]
+#         config = config_class.from_pretrained(Config.gpt2)
+#         self.tokenizer = tokenizer_class.from_pretrained(Config.gpt2)
+#         self.model = model_class.from_pretrained(Config.gpt2, from_tf=bool('.ckpt' in Config.gpt2), config=config)
 
-        self.MASK_MODE = {
-            "between": self.mask_between_entity,
-        }
+#         self.MASK_MODE = {
+#             "between": self.mask_between_entity,
+#         }
     
-    def mask_between_entity(self, inputs, between_mask):
-        labels = inputs.clone()
-        between_entity_mask_indices = between_mask.bool()
-        labels[~between_entity_mask_indices] = -1
-        # we only compute loss for masked token && not padding token
-        return labels
+#     def mask_between_entity(self, inputs, between_mask):
+#         labels = inputs.clone()
+#         between_entity_mask_indices = between_mask.bool()
+#         labels[~between_entity_mask_indices] = -1
+#         # we only compute loss for masked token && not padding token
+#         return labels
 
-    def forward(self, input_ids, attention_mask, mask, latent=None, labels=None):
-        """input_ids shape is `(batch_size, sequence_length)`
-           latent shape is `(batch_size, hidden_size)`
-           label shape is `(batch_size, hidden_size)`
-        """        
-        inputs = {
-            'input_ids':input_ids,
-            'attention_mask':attention_mask,
-            'mask':mask,
-            'latent':latent,
-            'labels':labels
-        }
-        ouputs = self.model(**inputs)
-        loss = ouputs[0]
-        return loss, torch.argmax(ouputs[1], 2)
+#     def forward(self, input_ids, attention_mask, mask, latent=None, labels=None):
+#         """input_ids shape is `(batch_size, sequence_length)`
+#            latent shape is `(batch_size, hidden_size)`
+#            label shape is `(batch_size, hidden_size)`
+#         """        
+#         inputs = {
+#             'input_ids':input_ids,
+#             'attention_mask':attention_mask,
+#             'mask':mask,
+#             'latent':latent,
+#             'labels':labels
+#         }
+#         ouputs = self.model(**inputs)
+#         loss = ouputs[0]
+#         return loss, torch.argmax(ouputs[1], 2)
         

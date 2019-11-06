@@ -359,16 +359,14 @@ class Dataloader:
         if self.flag == "ins":
             index = self.order[idx0:idx1]
             max_length = self.data_length[index].max()
-            max_decoder_length = self.data_decoder_length[index].max()
             if Config.training:
                 return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
                         self.to_tensor(self.data_attention_mask[index][:, :max_length]), \
-                         self.to_tensor(self.data_mask[index][:, :max_decoder_length]), \
+                         self.to_tensor(self.data_mask[index][:, :max_length]), \
                           self.to_tensor(self.data_query[index]), \
                            self.to_tensor(self.data_knowledge[index]), \
-                            self.to_tensor(self.data_decoder_input_ids[index][:, :max_decoder_length]), \
-                             self.to_tensor(self.data_decoder_attention_mask[index][:, :max_decoder_length]), \
-                              self.to_tensor(self.data_labels[index][:, :max_decoder_length])
+                            self.to_tensor(self.data_decoder_input_ids[index][:, :max_length]), \
+                             self.to_tensor(self.data_decoder_attention_mask[index][:, :max_length])
             else:
                 return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
                         self.to_tensor(self.data_attention_mask[index][:, :max_length])
