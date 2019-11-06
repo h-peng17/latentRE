@@ -143,18 +143,16 @@ class GPT2Decoder(nn.Module):
         # we only compute loss for masked token && not padding token
         return labels
 
-    def forward(self, input_ids, attention_mask, mask, latent=None):
+    def forward(self, input_ids, attention_mask, mask, latent=None, labels=None):
         """input_ids shape is `(batch_size, sequence_length)`
            latent shape is `(batch_size, hidden_size)`
            label shape is `(batch_size, hidden_size)`
         """        
-        mask_func = self.MASK_MODE[Config.mask_mode]
-        labels = mask_func(input_ids, mask)
-
         inputs = {
             'input_ids':input_ids,
-            'latent':latent,
             'attention_mask':attention_mask,
+            'mask':mask,
+            'latent':latent,
             'labels':labels
         }
         ouputs = self.model(**inputs)

@@ -125,6 +125,7 @@ class Dataloader:
             self.data_decoder_attention_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_token_mask = np.ones((self.instance_tot, Config.sen_len), dtype=int)
             self.data_between_entity_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
+            self.data_labels = np.zeros((self.instance_tot, Config.sen_len), dtype=int) - 1 # -1
 
             def _process_loop(i):
                 instance = data[i]
@@ -230,15 +231,13 @@ class Dataloader:
                 self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(gpt2_tokens[0:length])
                 self.data_decoder_attention_mask[i][0:length] = 1
                 self.data_between_entity_mask[i][rel_pos] = 1
+                self.data_labels[i][rel_pos+1:length] = self.data_decoder_input_ids[i][rel_pos+1:length]
                 self.data_decoder_length[i] = length
-
 
                 # knowledge 
                 entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
                 rels = knowledge[entities]
                 rel_num = len(rels)
-                # tot_prop = 1 if rel_num == 1 and rels[0] == "NA" else 0.95
-                # na_prop = 0 if rel_num == 1 and rels[0] == "NA" else 0.05 
                 for rel in rels:
                     try:
                         self.data_knowledge[i][rel2id[rel]] = 1 / rel_num
@@ -251,7 +250,7 @@ class Dataloader:
             pool.map(_process_loop, range(0, self.instance_tot))
 
             # save array
-            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_label.npy"), self.data_query)
+            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_query.npy"), self.data_query)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_length.npy"), self.data_length)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_length.npy"), self.data_decoder_length)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy"), self.data_knowledge)
@@ -261,6 +260,7 @@ class Dataloader:
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_attention_mask.npy"), self.data_decoder_attention_mask)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"), self.data_token_mask)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_between_entity_mask.npy"), self.data_between_entity_mask) 
+            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_labels.npy"), self.data_labels) 
             json.dump(self.entpair2scope, open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json"), 'w'))
             json.dump(self.relfact2scope, open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_relfact2scope.json"), "w"))
             print("end pre-process")
@@ -269,7 +269,7 @@ class Dataloader:
         else:
             print("There exists pre-processed data already. loading....")
             self.word_vec = None
-            self.data_query = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_label.npy"))
+            self.data_query = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_query.npy"))
             self.data_length = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_length.npy"))
             self.data_decoder_length = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_length.npy"))
             self.data_knowledge = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy"))
@@ -277,6 +277,7 @@ class Dataloader:
             self.data_attention_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_attention_mask.npy"))
             self.data_decoder_input_ids = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_input_ids.npy"))
             self.data_decoder_attention_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_attention_mask.npy"))
+            self.data_labels = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_labels.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json")))
             self.relfact2scope = json.load(open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_relfact2scope.json")))
             Config.rel_num = len(json.load(open(os.path.join("../data/"+dataset, "rel2id.json"))))
@@ -342,15 +343,11 @@ class Dataloader:
                           self.to_tensor(self.data_query[index]), \
                            self.to_tensor(self.data_knowledge[index]), \
                             self.to_tensor(self.data_decoder_input_ids[index][:, :max_decoder_length]), \
-                             self.to_tensor(self.data_decoder_attention_mask[index][:, :max_decoder_length])
+                             self.to_tensor(self.data_decoder_attention_mask[index][:, :max_decoder_length]), \
+                              self.to_tensor(self.data_labels[index][:, :max_decoder_length])
             else:
                 return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
                         self.to_tensor(self.data_attention_mask[index][:, :max_length])
-            # batch_data = {}
-            # batch_data['word'] = self.to_tensor(self.data_word[index][:, :max_length])
-            # batch_data['pos1'] = self.to_tensor(self.data_pos1[index][:, :max_length])
-            # batch_data['pos2'] = self.to_tensor(self.data_pos2[index][:, :max_length])
-            # return batch_data
         else:
             batch_data = {}
             _word = []
