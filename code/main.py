@@ -86,9 +86,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     set_seed(args)
     for i in range(Config.max_epoch):
         # train
-        final_pre_words = torch.zeros((0, Config.sen_len))
-        final_input_words = torch.zeros((0, Config.sen_len))
-        final_mask_words = torch.zeros((0, Config.sen_len))
+        final_pre_words = torch.zeros((0, Config.sen_len), dtype=torch.int64)
+        final_input_words = torch.zeros((0, Config.sen_len), dtype=torch.int64)
+        final_mask_words = torch.zeros((0, Config.sen_len), dtype=torch.int64)
         parallel_model.train()
         Config.training = True
         epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
