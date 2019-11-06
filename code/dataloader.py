@@ -220,14 +220,18 @@ class Dataloader:
                 # gpt2_tokens_final = []
                 # gpt2_tokens_final.extend(gpt2_tokens[sec_pos:length])
                 # gpt2_tokens_final.extend(gpt2_tokens[0:sec_pos])
+                # self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(gpt2_tokens_final[0:length])
+                # self.data_decoder_attention_mask[i][0:length] = 1
+                # self.data_between_entity_mask[i][fir_pos+len_fir+length-sec_pos:length] = 1
                 sentence = head + ' ' + '*' + ' ' + tail
-                relation_position
-
-                self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(gpt2_tokens_final[0:length])
+                gpt2_tokens = gpt2_tokenizer.tokenize(sentence)
+                rel_pos = gpt2_tokens.index('Ġ*')
+                length = min(len(gpt2_tokens), Config.sen_len)
+                self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(gpt2_tokens[0:length])
                 self.data_decoder_attention_mask[i][0:length] = 1
-                # self.data_token_mask[i][head_pos-1:head_pos+len_head] = 0
-                # self.data_token_mask[i][tail_pos-1:tail_pos+len_tail] = 0
-                self.data_between_entity_mask[i][fir_pos+len_fir+length-sec_pos:length] = 1 #！！！！
+                self.data_between_entity_mask[i][rel_pos] = 1
+                self.data_decoder_length[i] = length
+
 
                 # knowledge 
                 entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
@@ -249,6 +253,7 @@ class Dataloader:
             # save array
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_label.npy"), self.data_query)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_length.npy"), self.data_length)
+            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_length.npy"), self.data_decoder_length)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy"), self.data_knowledge)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_input_ids.npy"), self.data_input_ids)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_attention_mask.npy"), self.data_attention_mask)
@@ -266,6 +271,7 @@ class Dataloader:
             self.word_vec = None
             self.data_query = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_label.npy"))
             self.data_length = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_length.npy"))
+            self.data_decoder_length = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_length.npy"))
             self.data_knowledge = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy"))
             self.data_input_ids = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_input_ids.npy"))
             self.data_attention_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_attention_mask.npy"))
@@ -328,14 +334,15 @@ class Dataloader:
         if self.flag == "ins":
             index = self.order[idx0:idx1]
             max_length = self.data_length[index].max()
+            max_decoder_length = self.data_decoder_length[index].max()
             if Config.training:
-                return self.to_tensor(self.data_input_ids[index]), \
-                        self.to_tensor(self.data_attention_mask[index]), \
-                         self.to_tensor(self.data_mask[index]), \
+                return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
+                        self.to_tensor(self.data_attention_mask[index][:, :max_length]), \
+                         self.to_tensor(self.data_mask[index][:, :max_decoder_length]), \
                           self.to_tensor(self.data_query[index]), \
                            self.to_tensor(self.data_knowledge[index]), \
-                            self.to_tensor(self.data_decoder_input_ids[index]), \
-                             self.to_tensor(self.data_decoder_attention_mask[index])
+                            self.to_tensor(self.data_decoder_input_ids[index][:, :max_decoder_length]), \
+                             self.to_tensor(self.data_decoder_attention_mask[index][:, :max_decoder_length])
             else:
                 return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
                         self.to_tensor(self.data_attention_mask[index][:, :max_length])

@@ -137,13 +137,11 @@ class GPT2Decoder(nn.Module):
         }
     
     def mask_between_entity(self, inputs, between_mask):
-        inputs = inputs.cpu()
-        between_mask = between_mask.cpu()
         labels = inputs.clone()
         between_entity_mask_indices = between_mask.bool()
         labels[~between_entity_mask_indices] = -1
         # we only compute loss for masked token && not padding token
-        return labels.cuda()
+        return labels
 
     def forward(self, input_ids, attention_mask, mask, latent=None):
         """input_ids shape is `(batch_size, sequence_length)`
