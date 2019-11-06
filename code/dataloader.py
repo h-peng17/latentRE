@@ -166,10 +166,7 @@ class Dataloader:
                     sec_pos = head_pos
                     len_fir = len(tail_tokens)
                     len_sec = len(head_tokens)
-                self.data_input_ids[i][0:fir_pos-1] = bert_tokenizer.convert_tokens_to_ids(bert_tokenizer.mask_token)
-                self.data_input_ids[i][fir_pos+len_fir+1:sec_pos-1] = bert_tokenizer.convert_tokens_to_ids(bert_tokenizer.mask_token)
-                self.data_input_ids[i][sec_pos+len_sec+1:length] = bert_tokenizer.convert_tokens_to_ids(bert_tokenizer.mask_token)
-                # self.data_between_entity_mask[i][]            
+                self.data_between_entity_mask[i][fir_pos+len_fir+1:sec_pos-1] = 1           
                 
                 # # for bert decoder
                 # bert_tokens = bert_tokenizer.tokenize(sentence)

@@ -20,8 +20,8 @@ class LatentRE(nn.Module):
         super(LatentRE, self).__init__()
         self.encoder = Bert()
         self.selector = Selector()
-        # self.decoder = BertDecoder()
-        self.decoder = GPT2Decoder()
+        self.decoder = BertDecoder()
+        # self.decoder = GPT2Decoder()
         self.loss = Loss(weight)
         
     def forward(self, 
@@ -45,7 +45,7 @@ class LatentRE(nn.Module):
             kl_loss = self.loss.kl_loss(logit, knowledge)
             if Config.latent:
                 gen_loss, pre_words = self.decoder(decoder_input_ids, decoder_attention_mask, mask, latent, labels)
-                return kl_loss + gen_loss * Config.gen_loss_scale, pre_words # !!!!!!
+                return kl_loss * Config.kl_loss_scale + gen_loss * Config.gen_loss_scale, pre_words # !!!!!!
             else:
                 return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale, None
         else:
