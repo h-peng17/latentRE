@@ -110,8 +110,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 scaled_loss.backward()
             nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
                       
-            final_input_words.append(batch_data[5])
-            final_mask_words.append(batch_data[2])
+            final_input_words.append(batch_data[5].tolist())
+            final_mask_words.append(batch_data[2].tolist())
             final_pre_words.append(pre_words.cpu().detach().numpy().tolist())
             
             optimizer.step()
