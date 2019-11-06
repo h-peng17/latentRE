@@ -10,7 +10,7 @@ from config import Config
 from textRepre import TextRepre
 from selector import Selector
 from loss import Loss
-from decoder import BertDecoder, GPT2Decoder
+from decoder import BertDecoder
 from encoder import Bert
 import time
 
