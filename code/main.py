@@ -121,9 +121,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             # sys.stdout.write("epoch: %d, step: %d, loss: %.6f\r" % (i, global_step, loss))
             # sys.stdout.flush()
         print("")
-        json.dump(final_input_words, open("../output/"+Config.info+"input_words.npy"))
-        json.dump(final_mask_words, open("../output/"+Config.info+"mask.npy"))
-        json.dump(final_pre_words, open("../output/"+Config.info+"pre_words.npy"))
+        json.dump(final_input_words, open("../output/"+Config.info+"input_words.npy", 'w'))
+        json.dump(final_mask_words, open("../output/"+Config.info+"mask.npy", 'w'))
+        json.dump(final_pre_words, open("../output/"+Config.info+"pre_words.npy", 'w'))
         # clean gpu memory cache
         torch.cuda.empty_cache()
         
