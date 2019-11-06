@@ -104,7 +104,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'decoder_attention_mask':batch_data[6].cuda(),
                 'labels':batch_data[7].cuda()
             }        
-            loss, pre_words = parallel_model(**inputs)
+            loss = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
