@@ -46,7 +46,7 @@ class Dataloader:
         self.mode = mode
         if not os.path.exists("../data/pre_processed_data"):
             os.mkdir("../data/pre_processed_data")
-        if not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_label.npy")) or \
+        if not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_query.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_length.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json")) or \
@@ -54,7 +54,6 @@ class Dataloader:
         not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_input_ids.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_attention_mask.npy")) or \
         not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy")):
-        # not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_word.npy")):
             print("There dones't exist pre-processed data, pre-processing...")
             start_time = time.time()
             data = json.load(open(os.path.join("../data/"+dataset, mode+".json")))
