@@ -86,6 +86,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     set_seed(args)
     for i in range(Config.max_epoch):
         # train
+        final_pre_words = torch.zeros((0, Config.sen_len))
+        final_input_words = torch.zeros((0, Config.sen_len))
+        final_mask_words = torch.zeros((0, Config.sen_len))
         parallel_model.train()
         Config.training = True
         epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
@@ -100,12 +103,16 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'decoder_input_ids':batch_data[5].cuda(),
                 'decoder_attention_mask':batch_data[6].cuda()
             }        
-            loss = parallel_model(**inputs)
+            loss, pre_words = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
             nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
                       
+            final_input_words = torch.cat((final_input_words, batch_data[5]), 0)
+            final_mask_words = torch.cat((final_mask_words, batch_data[2]), 0)
+            final_pre_words = torch.cat((final_pre_words, pre_words.cpu().detach()), 0)
+            
             optimizer.step()
             scheduler.step()
             parallel_model.zero_grad()
@@ -113,6 +120,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             # sys.stdout.write("epoch: %d, step: %d, loss: %.6f\r" % (i, global_step, loss))
             # sys.stdout.flush()
         print("")
+        np.save("../output/"+Config.info+"input_words.npy", final_input_words.numpy())
+        np.save("../output/"+Config.info+"mask.npy", final_mask_words.numpy())
+        np.save("../output/"+Config.info+"pre_words.npy", final_pre_words.numpy())
         # clean gpu memory cache
         torch.cuda.empty_cache()
         

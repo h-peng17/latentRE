@@ -218,5 +218,5 @@ class GPT2Decoder(nn.Module):
         }
         ouputs = self.model(**inputs)
         loss = ouputs[0]
-        return loss
+        return loss, torch.argmax(ouputs[1], 2)
         
