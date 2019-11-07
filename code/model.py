@@ -21,7 +21,7 @@ class LatentRE(nn.Module):
         super(LatentRE, self).__init__()
         ''' load encoder '''
         # checkpoint = torch.load(os.path.join(Config.save_path, "ckptceentity1"))
-        # self.encoder = Bert()
+        self.encoder = Bert()
         # self.encoder.load_state_dict(checkpoint["model"])
         # for param in self.encoder.parameters():
         #     param.requires_grad = False # frozen
@@ -45,14 +45,14 @@ class LatentRE(nn.Module):
                   knowledge=None, 
                   scope=None):
         if Config.training:
-            # text = self.encoder(input_ids, attention_mask)
-            # logit, latent = self.selector(text, scope, query)
-            # ce_loss = self.loss.ce_loss(logit, query)
-            # kl_loss = self.loss.kl_loss(logit, knowledge)
+            text = self.encoder(input_ids, attention_mask)
+            logit, latent = self.selector(text, scope, query)
+            ce_loss = self.loss.ce_loss(logit, query)
+            kl_loss = self.loss.kl_loss(logit, knowledge)
             if Config.latent:
-                gen_loss, output = self.decoder(decoder_input_ids, decoder_attention_mask, mask, None)
-                # return kl_loss * Config.kl_loss_scale + gen_loss * Config.gen_loss_scale, output # !!!!!!
-                return gen_loss, output
+                gen_loss, output = self.decoder(decoder_input_ids, decoder_attention_mask, mask, latent)
+                return kl_loss * Config.kl_loss_scale + gen_loss * Config.gen_loss_scale + ce_loss, output # !!!!!!
+                # return gen_loss, output
             else:
                 return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
         else:
