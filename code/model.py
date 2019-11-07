@@ -22,7 +22,7 @@ class LatentRE(nn.Module):
         ''' load encoder '''
         checkpoint = torch.load(os.path.join(Config.save_path, "ckptceentity1"))
         self.encoder = Bert()
-        self.encoder.load_state_dict(checkpoint["module"])
+        self.encoder.load_state_dict(checkpoint["model"])
         for param in self.encoder.parameters():
             param.requires_grad = False # frozen
 
