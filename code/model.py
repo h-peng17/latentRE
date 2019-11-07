@@ -13,6 +13,7 @@ from loss import Loss
 from decoder import BertDecoder
 from encoder import Bert
 import time
+import os
 
 
 class LatentRE(nn.Module):
