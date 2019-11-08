@@ -68,8 +68,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     optimizer = AdamW(optimizer_grouped_parameters, lr=Config.lr, eps=Config.adam_epsilon, correct_bias=False)
     scheduler = WarmupLinearSchedule(optimizer, warmup_steps=Config.warmup_steps, t_total=t_total)
 
-    checkpoint = torch.load(os.path.join(Config.save_path, "ckpttraindecoder2"))
-    model.load_state_dict(checkpoint['model'])
+    # checkpoint = torch.load(os.path.join(Config.save_path, "ckpttraindecoder2"))
+    # model.load_state_dict(checkpoint['model'])
+
     # amp training 
     model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
 
@@ -90,11 +91,11 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         # train
         final_input_words = []
         final_mask_words = []
-        final_pre_words = []
+        final_output_words = []
         parallel_model.train()
         Config.training = True
-        epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
-        for j in epoch_iterator:
+        # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
+        for j in range(int(train_ins_tot/Config.batch_size)):
             batch_data = train_dataloader.next_batch()
             inputs = {
                 'input_ids':batch_data[0].cuda(),
@@ -103,7 +104,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'query':batch_data[3].cuda(),
                 'knowledge':batch_data[4].cuda().float(),
             }        
-            loss = parallel_model(**inputs)
+            loss, output = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
@@ -112,6 +113,13 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             scheduler.step()
             parallel_model.zero_grad()
             global_step += 1
+            sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
+            sys.stdout.flush()
+
+            final_input_words.append(batch_data[0].tolist())
+            final_mask_words.append(batch_data[2].tolist())
+            final_output_words.append(output.cpu().detach().numpy().tolist())
+
         print("")
         # clean gpu memory cache
         torch.cuda.empty_cache()
@@ -120,12 +128,15 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         if (i+1) % Config.save_epoch == 0:
             checkpoint = {
                 # 'model': model.state_dict(),
-                'encoder': model.encoder.state_dict(),
-                'selector': model.selector.state_dict(),
+                # 'encoder': model.encoder.state_dict(),
+                # 'selector': model.selector.state_dict(),
                 'optimizer':optimizer.state_dict(),
                 'amp':amp.state_dict()
             }
-            torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
+            # torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
+            json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))
+            json.dump(final_mask_words, open(os.path.join("../output", Config.info+'mask.json'), 'w'))
+            json.dump(final_output_words, open(os.path.join("../output", Config.info+"output.json"), 'w'))
         
         # dev
         if (i+1) % Config.dev_step == 0:
