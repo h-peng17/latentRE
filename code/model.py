@@ -38,8 +38,8 @@ class LatentRE(nn.Module):
                   label=None,
                   input_ids=None, 
                   attention_mask=None, 
-                  decoder_input_ids=None,
-                  decoder_attention_mask=None,
+                #   decoder_input_ids=None,
+                #   decoder_attention_mask=None,
                   mask=None,
                   query=None,
                   knowledge=None, 
@@ -50,7 +50,7 @@ class LatentRE(nn.Module):
             ce_loss = self.loss.ce_loss(logit, query)
             kl_loss = self.loss.kl_loss(logit, knowledge)
             if Config.latent:
-                gen_loss, output = self.decoder(decoder_input_ids, decoder_attention_mask, mask, latent)
+                gen_loss, output = self.decoder(input_ids, attention_mask, mask, latent)
                 # return kl_loss * Config.kl_loss_scale + gen_loss * Config.gen_loss_scale, output # !!!!!!
                 return gen_loss, output
             else:

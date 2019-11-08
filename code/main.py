@@ -102,8 +102,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'mask':batch_data[2].cuda(),
                 'query':batch_data[3].cuda(),
                 'knowledge':batch_data[4].cuda().float(),
-                'decoder_input_ids':batch_data[5].cuda(),
-                'decoder_attention_mask':batch_data[6].cuda(),
+                # 'decoder_input_ids':batch_data[5].cuda(),
+                # 'decoder_attention_mask':batch_data[6].cuda(),
             }        
             loss, pre_words = parallel_model(**inputs)
             loss = loss.mean()
@@ -111,7 +111,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 scaled_loss.backward()
             nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
                       
-            final_input_words.append(batch_data[5].tolist())
+            final_input_words.append(batch_data[0].tolist())
             final_mask_words.append(batch_data[2].tolist())
             final_pre_words.append(pre_words.cpu().detach().numpy().tolist())
             
