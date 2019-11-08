@@ -57,7 +57,7 @@ class LatentRE(nn.Module):
                 # return kl_loss * Config.kl_loss_scale + gen_loss * Config.gen_loss_scale, output # !!!!!!
                 return gen_loss, output
             else:
-                return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
+                return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale, None
         else:
             text = self.encoder(input_ids, attention_mask)
             logit = self.selector(text, scope)
