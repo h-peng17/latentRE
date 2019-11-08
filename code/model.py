@@ -27,6 +27,9 @@ class LatentRE(nn.Module):
             param.requires_grad = False # frozen
 
         self.selector = Selector()
+        for param in self.selector.parameters():
+            param.requires_grad = False
+            
         self.decoder = BertDecoder()
         # self.decoder = GPT2Decoder()
         self.loss = Loss(weight)
