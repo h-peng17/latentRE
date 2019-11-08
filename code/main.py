@@ -68,8 +68,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     optimizer = AdamW(optimizer_grouped_parameters, lr=Config.lr, eps=Config.adam_epsilon, correct_bias=False)
     scheduler = WarmupLinearSchedule(optimizer, warmup_steps=Config.warmup_steps, t_total=t_total)
 
-    # checkpoint = torch.load(os.path.join(Config.save_path, "ckpttraindecoderbetween0"))
-    # model.load_state_dict(checkpoint['model'])
+    checkpoint = torch.load(os.path.join(Config.save_path, "ckpttraindecoder2"))
+    model.load_state_dict(checkpoint['model'])
     # amp training 
     model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
 
