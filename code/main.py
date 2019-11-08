@@ -119,7 +119,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         # save model     
         if (i+1) % Config.save_epoch == 0:
             checkpoint = {
-                'model': model.state_dict(),
+                # 'model': model.state_dict(),
+                'encoder': model.encoder.state_dict(),
+                'selector': model.selector.state_dict(),
                 'optimizer':optimizer.state_dict(),
                 'amp':amp.state_dict()
             }
