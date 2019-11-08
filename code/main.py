@@ -102,29 +102,17 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'mask':batch_data[2].cuda(),
                 'query':batch_data[3].cuda(),
                 'knowledge':batch_data[4].cuda().float(),
-                # 'decoder_input_ids':batch_data[5].cuda(),
-                # 'decoder_attention_mask':batch_data[6].cuda(),
             }        
             loss = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
             nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
-                      
-            # final_input_words.append(batch_data[0].tolist())
-            # final_mask_words.append(batch_data[2].tolist())
-            # final_pre_words.append(pre_words.cpu().detach().numpy().tolist())
-            
             optimizer.step()
             scheduler.step()
             parallel_model.zero_grad()
             global_step += 1
-            # sys.stdout.write("epoch: %d, step: %d, loss: %.6f\r" % (i, global_step, loss))
-            # sys.stdout.flush()
         print("")
-        # json.dump(final_input_words, open("../output/"+Config.info+"input_words.json", 'w'))
-        # json.dump(final_mask_words, open("../output/"+Config.info+"mask.json", 'w'))
-        # json.dump(final_pre_words, open("../output/"+Config.info+"pre_words.json", 'w'))
         # clean gpu memory cache
         torch.cuda.empty_cache()
         

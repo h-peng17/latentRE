@@ -20,14 +20,13 @@ class LatentRE(nn.Module):
     def __init__(self, word_vec, weight=None):
         super(LatentRE, self).__init__()
         ''' load encoder '''
-        # checkpoint = torch.load(os.path.join(Config.save_path, "ckptceentity1"))
+        checkpoint = torch.load(os.path.join(Config.save_path, "ckptceentity1"))
         self.encoder = Bert()
-        # self.encoder.load_state_dict(checkpoint["model"])
-        # for param in self.encoder.parameters():
-        #     param.requires_grad = False # frozen
+        self.encoder.load_state_dict(checkpoint["model"])
+        for param in self.encoder.parameters():
+            param.requires_grad = False # frozen
         self.selector = Selector()
         self.decoder = BertDecoder()
-        # self.decoder = GPT2Decoder()
         self.loss = Loss(weight)
         
     def forward(self, 
@@ -37,8 +36,6 @@ class LatentRE(nn.Module):
                   label=None,
                   input_ids=None, 
                   attention_mask=None, 
-                #   decoder_input_ids=None,
-                #   decoder_attention_mask=None,
                   mask=None,
                   query=None,
                   knowledge=None, 
