@@ -27,9 +27,6 @@ class LatentRE(nn.Module):
             param.requires_grad = False # frozen
 
         self.selector = Selector()
-        # for param in self.selector.parameters():
-        #     param.requires_grad = False
-            
         self.decoder = BertDecoder()
         # self.decoder = GPT2Decoder()
         self.loss = Loss(weight)
@@ -57,7 +54,7 @@ class LatentRE(nn.Module):
                 # return kl_loss * Config.kl_loss_scale + gen_loss * Config.gen_loss_scale, output # !!!!!!
                 return gen_loss, output
             else:
-                return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale, None
+                return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
         else:
             text = self.encoder(input_ids, attention_mask)
             logit = self.selector(text, scope)
