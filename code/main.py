@@ -68,9 +68,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     optimizer = AdamW(optimizer_grouped_parameters, lr=Config.lr, eps=Config.adam_epsilon, correct_bias=False)
     scheduler = WarmupLinearSchedule(optimizer, warmup_steps=Config.warmup_steps, t_total=t_total)
 
-    # checkpoint = torch.load(os.path.join(Config.save_path, "ckpttraindecoder2"))
-    # model.load_state_dict(checkpoint['model'])
-
     # amp training 
     model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
 
@@ -96,8 +93,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         final_output_words = []
         parallel_model.train()
         Config.training = True
-        # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
-        for j in range(int(train_ins_tot/Config.batch_size)):
+        epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
+        for j in range(epoch_iterator):
             batch_data = train_dataloader.next_batch()
             inputs = {
                 'input_ids':batch_data[0].cuda(),
@@ -121,8 +118,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             tot += label.shape[0]
             acc += (output == label).sum()
             
-            sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, acc/tot, loss))
-            sys.stdout.flush()
+            # sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, acc/tot, loss))
+            # sys.stdout.flush()
 
             # final_input_words.append(batch_data[0].tolist())
             # final_mask_words.append(batch_data[2].tolist())
@@ -135,11 +132,10 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         # save model     
         if (i+1) % Config.save_epoch == 0:
             checkpoint = {
-                # 'model': model.state_dict(),
-                'encoder': model.encoder.state_dict(),
-                'selector': model.selector.state_dict(),
-                'optimizer':optimizer.state_dict(),
-                'amp':amp.state_dict()
+                # 'encoder': model.encoder.state_dict(),
+                # 'selector': model.selector.state_dict(),
+                'decoder': model.decoder.state_dict(),
+                'decoder_rel_mat':model.decoder_rel_mat
             }
             torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
             # json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))

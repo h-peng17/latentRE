@@ -20,18 +20,17 @@ class LatentRE(nn.Module):
     def __init__(self, word_vec, weight=None):
         super(LatentRE, self).__init__()
         ''' load encoder '''
-        # checkpoint = torch.load(os.path.join(Config.save_path, "ckptencoder1"))
+        checkpoint = torch.load(os.path.join(Config.save_path, "ckptencoder_not_na9"))
         self.encoder = Bert()
-        # self.encoder.load_state_dict(checkpoint["encoder"])
-        # for param in self.encoder.parameters():
-            # param.requires_grad = False # frozen
-        # self.encoder = Bert()
+        self.encoder.load_state_dict(checkpoint["encoder"])
+        for param in self.encoder.parameters():
+            param.requires_grad = False # frozen
         self.selector = Selector()
-        # self.selector.load_state_dict(checkpoint['selector'])
-        # for param in self.selector.parameters():
-            # param.requires_grad = False # frozen
+        self.selector.load_state_dict(checkpoint['selector'])
+        for param in self.selector.parameters():
+            param.requires_grad = False # frozen
 
-        # self.decoder = BertDecoder()
+        self.decoder = BertDecoder()
         self.loss = Loss(weight)
         self.decoder_rel_mat = nn.Parameter(torch.zeros(Config.hidden_size, Config.rel_num))
         
