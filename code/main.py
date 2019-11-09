@@ -94,7 +94,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         parallel_model.train()
         Config.training = True
         epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
-        for j in range(epoch_iterator):
+        for j in epoch_iterator:
             batch_data = train_dataloader.next_batch()
             inputs = {
                 'input_ids':batch_data[0].cuda(),
@@ -103,7 +103,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'query':batch_data[3].cuda(),
                 'knowledge':batch_data[4].cuda().float(),
             }        
-            loss, output = parallel_model(**inputs)
+            loss = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
@@ -113,10 +113,10 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             parallel_model.zero_grad()
             global_step += 1
 
-            output = output.cpu().detach().numpy()
-            label = batch_data[3].numpy()
-            tot += label.shape[0]
-            acc += (output == label).sum()
+            # output = output.cpu().detach().numpy()
+            # label = batch_data[3].numpy()
+            # tot += label.shape[0]
+            # acc += (output == label).sum()
             
             # sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, acc/tot, loss))
             # sys.stdout.flush()
