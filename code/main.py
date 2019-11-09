@@ -100,9 +100,14 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
                 for j in range(dev_iterator):
                     batch_data = dev_dataloader.next_batch()
+                    # inputs = {
+                    #     'input_ids':batch_data[0].cuda(),
+                    #     'attention_mask':batch_data[1].cuda()
+                    # }
                     inputs = {
-                        'input_ids':batch_data[0].cuda(),
-                        'attention_mask':batch_data[1].cuda()
+                        'word':batch_data["word"].cuda(),
+                        'pos1':batch_data['pos1'].cuda(),
+                        'pos2':batch_data['pos2'].cuda()
                     }
                     logit = parallel_model(**inputs)
                     bagTest.update(logit.cpu().detach())
@@ -134,13 +139,21 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
         for j in range(int(train_ins_tot/Config.batch_size)):
             batch_data = train_dataloader.next_batch()
+            # inputs = {
+            #     'input_ids':batch_data[0].cuda(),
+            #     'attention_mask':batch_data[1].cuda(),
+            #     'mask':batch_data[2].cuda(),
+            #     'query':batch_data[3].cuda(),
+            #     'knowledge':batch_data[4].cuda().float(),
+            # }        
             inputs = {
-                'input_ids':batch_data[0].cuda(),
-                'attention_mask':batch_data[1].cuda(),
-                'mask':batch_data[2].cuda(),
-                'query':batch_data[3].cuda(),
-                'knowledge':batch_data[4].cuda().float(),
-            }        
+                'word':batch_data['word'].cuda(),
+                'pos1':batch_data['pos1'].cuda(),
+                'pos2':batch_data['pos2'].cuda(),
+                'query':batch_data['query'].cuda(),
+                'label':batch_data['label'].cuda(),
+                'scope':batch_data['scope']
+            }
             loss, output = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
