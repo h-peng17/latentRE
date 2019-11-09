@@ -118,7 +118,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             # tot += label.shape[0]
             # acc += (output == label).sum()
             
-            sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, acc/tot, loss))
+            sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
             sys.stdout.flush()
 
             # final_input_words.append(batch_data[0].tolist())
