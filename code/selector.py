@@ -41,7 +41,7 @@ class Selector(nn.Module):
         self.bias = nn.Parameter(torch.randn(Config.rel_num))
 
         # for test
-        nn.init.xavier_normal_(self.rel_mat)
+        # nn.init.xavier_normal_(self.rel_mat)
         # nn.init.xavier_normal_(self.bias)
 
         self.softmax = nn.Softmax(1)
