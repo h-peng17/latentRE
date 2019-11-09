@@ -27,6 +27,7 @@ class LatentRE(nn.Module):
             param.requires_grad = False # frozen
         # self.encoder = Bert()
         self.selector = Selector()
+        self.selector.load_state_dict(checkpoint["selector"])
         self.decoder = BertDecoder()
         self.loss = Loss(weight)
         
