@@ -31,7 +31,7 @@ class LatentRE(nn.Module):
         for param in self.selector.parameters():
             param.requires_grad = False # frozen
 
-        self.decoder = BertDecoder()
+        # self.decoder = BertDecoder()
         self.loss = Loss(weight)
         self.decoder_rel_mat = nn.Parameter(torch.zeros(Config.hidden_size, Config.rel_num))
         
