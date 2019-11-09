@@ -89,6 +89,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     set_seed(args)
     for i in range(Config.max_epoch):
         # train
+        acc = 0
+        tot = 0
         final_input_words = []
         final_mask_words = []
         final_output_words = []
@@ -104,7 +106,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'query':batch_data[3].cuda(),
                 'knowledge':batch_data[4].cuda().float(),
             }        
-            loss = parallel_model(**inputs)
+            loss, output = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
@@ -113,7 +115,13 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             scheduler.step()
             parallel_model.zero_grad()
             global_step += 1
-            sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
+
+            output = output.cpu().detach().numpy()
+            label = batch_data[3].numpy()
+            tot += label.shape[0]
+            acc += (output == label).sum()
+            
+            sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, acc/tot, loss))
             sys.stdout.flush()
 
             # final_input_words.append(batch_data[0].tolist())
@@ -139,27 +147,27 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             # json.dump(final_output_words, open(os.path.join("../output", Config.info+"output.json"), 'w'))
         
                 # dev
-        if (i+1) % Config.dev_step == 0:
-            with torch.no_grad():
-                print("begin deving...")
-                parallel_model.eval()
-                Config.training = False
-                dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
-                for j in range(dev_iterator):
-                    batch_data = dev_dataloader.next_batch()
-                    inputs = {
-                        'input_ids':batch_data[0].cuda(),
-                        'attention_mask':batch_data[1].cuda()
-                    }
-                    logit = parallel_model(**inputs)
-                    bagTest.update(logit.cpu().detach())
-                    sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
-                    sys.stdout.flush()
-                print("")
-                bagTest.forward(i)  
-                print("---------------------------------------------------------------------------------------------------")
-                #clean gpu memory cache
-                torch.cuda.empty_cache()
+        # if (i+1) % Config.dev_step == 0:
+        #     with torch.no_grad():
+        #         print("begin deving...")
+        #         parallel_model.eval()
+        #         Config.training = False
+        #         dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
+        #         for j in range(dev_iterator):
+        #             batch_data = dev_dataloader.next_batch()
+        #             inputs = {
+        #                 'input_ids':batch_data[0].cuda(),
+        #                 'attention_mask':batch_data[1].cuda()
+        #             }
+        #             logit = parallel_model(**inputs)
+        #             bagTest.update(logit.cpu().detach())
+        #             sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
+        #             sys.stdout.flush()
+        #         print("")
+        #         bagTest.forward(i)  
+        #         print("---------------------------------------------------------------------------------------------------")
+        #         #clean gpu memory cache
+        #         torch.cuda.empty_cache()
         
         
     # after iterator, save the best perfomance

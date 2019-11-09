@@ -56,7 +56,7 @@ class LatentRE(nn.Module):
                 gen_loss = self.decoder(input_ids, attention_mask, mask, latent)
                 return kl_loss * Config.kl_loss_scale + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale
             else:
-                return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
+                return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale, torch.argmax(logit, 1)
         else:
             text = self.encoder(input_ids, attention_mask)
             logit = self.selector(text, scope)
