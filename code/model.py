@@ -30,9 +30,12 @@ class LatentRE(nn.Module):
         for param in self.selector.parameters():
             param.requires_grad = False # frozen
 
+        decoder_ckpt = torch.load(os.path.join(Config.save_path, "ckptlatent29"))
         self.decoder = BertDecoder()
-        self.loss = Loss(weight)
+        self.decoder.load_state_dict(decoder_ckpt['decoder'])
         self.decoder_rel_mat = nn.Parameter(torch.zeros(Config.hidden_size, Config.rel_num))
+        self.decoder_rel_mat.load_state_dict(decoder_ckpt['decoder_rel_mat'])
+        self.loss = Loss(weight)
         
     def forward(self, 
                   word=None,
