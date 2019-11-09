@@ -29,6 +29,8 @@ class LatentRE(nn.Module):
         self.selector = Selector()
         self.decoder = BertDecoder()
         self.loss = Loss(weight)
+
+        self.decoder_rel_mat = nn.Parameter(torch.zeros(Config.hidden_size, Config.rel_num))
         
     def forward(self, 
                   word=None,
@@ -43,7 +45,8 @@ class LatentRE(nn.Module):
                   scope=None):
         if Config.training:
             text = self.encoder(input_ids, attention_mask)
-            logit, latent = self.selector(text, scope, query)
+            logit, gumbal_logit = self.selector(text, scope, query)
+            latent = torch.matmul(gumbal_logit, self.decoder_rel_mat.transpose(0, 1))
             ce_loss = self.loss.ce_loss(logit, query)
             kl_loss = self.loss.kl_loss(logit, knowledge)
             if Config.latent:

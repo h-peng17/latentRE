@@ -68,7 +68,7 @@ class Selector(nn.Module):
                 logit = self.__logit__(x)
                 # mask NA relation embedding because it give no infomation for decoder
                 gumbal_logit = self.gumbal_softmax(logit, Config.gumbel_temperature) * self.na_mask# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
+                # latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
                 
                 # add negative sample 
                 # `(batch)`
@@ -76,7 +76,7 @@ class Selector(nn.Module):
                 # neg_list = (torch.randint(1, 53, (pos_list.size()[0],), device=torch.cuda) + pos_list) % 53
                 # neg_latent = self.rel_mat.transpose(0,1)[neg_list]
 
-                return logit, latent
+                return logit, gumbal_logit
         else:
             if Config.eval_bag:
                 bag_logit = []
