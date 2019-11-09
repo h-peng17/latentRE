@@ -39,11 +39,6 @@ class Selector(nn.Module):
         super(Selector, self).__init__()
         self.rel_mat = nn.Parameter(torch.randn(Config.hidden_size, Config.rel_num))
         self.bias = nn.Parameter(torch.randn(Config.rel_num))
-
-        # for test
-        # nn.init.xavier_normal_(self.rel_mat)
-        # nn.init.xavier_normal_(self.bias)
-
         self.softmax = nn.Softmax(1)
         self.gumbal_softmax = GumbalSoftmax()
 
@@ -67,12 +62,7 @@ class Selector(nn.Module):
                     j = torch.argmax(instance_logit[:, query[i]])
                     bag_repre.append(bag_hidden_mat[j])
                 bag_repre = torch.stack(bag_repre)
-
                 bag_logit = self.__logit__(bag_repre)
-                gumbal_logit = self.gumbal_softmax(bag_logit, Config.gumbel_temperature) 
-                # gumbal_logit  `(batch_size, rel_num)`
-                # rel_mat `(hidden_size, rel_num)`
-                latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
                 return bag_logit
             else:
                 logit = self.__logit__(x)

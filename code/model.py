@@ -59,6 +59,7 @@ class LatentRE(nn.Module):
 
         if Config.training:
             text = self.encoder(word, pos1, pos2)
+            pdb.set_trace()
             logit = self.selector(text, scope, query)
             loss = self.loss.ce_loss(logit, label)
             return loss 
