@@ -113,7 +113,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'label':batch_data['label'].cuda(),
                 'scope':batch_data['scope']
             }
-            pdb.set_trace()
             loss = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
