@@ -115,7 +115,7 @@ class BertDecoder(nn.Module):
         }
         ouputs = self.model(**inputs)
         loss = ouputs[0]
-        return loss, torch.argmax(ouputs[1], -1)
+        return loss
         
 # class GPT2Decoder(nn.Module):
 #     def __init__(self):

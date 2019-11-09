@@ -88,64 +88,55 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     global_step = 0
     set_seed(args)
     for i in range(Config.max_epoch):
-        
-        # # train
-        # final_input_words = []
-        # final_mask_words = []
-        # final_output_words = []
-        # parallel_model.train()
-        # Config.training = True
-        # # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
-        # for j in range(int(train_ins_tot/Config.batch_size)):
-        #     batch_data = train_dataloader.next_batch()
-        #     # inputs = {
-        #     #     'input_ids':batch_data[0].cuda(),
-        #     #     'attention_mask':batch_data[1].cuda(),
-        #     #     'mask':batch_data[2].cuda(),
-        #     #     'query':batch_data[3].cuda(),
-        #     #     'knowledge':batch_data[4].cuda().float(),
-        #     # }        
-        #     inputs = {
-        #         'word':batch_data['word'].cuda(),
-        #         'pos1':batch_data['pos1'].cuda(),
-        #         'pos2':batch_data['pos2'].cuda(),
-        #         'query':batch_data['query'].cuda(),
-        #         'label':batch_data['label'].cuda(),
-        #         'scope':batch_data['scope']
-        #     }
-        #     loss = parallel_model(**inputs)
-        #     loss = loss.mean()
-        #     with amp.scale_loss(loss, optimizer) as scaled_loss:
-        #         scaled_loss.backward()
-        #     nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
-        #     optimizer.step()
-        #     scheduler.step()
-        #     parallel_model.zero_grad()
-        #     global_step += 1
-        #     sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
-        #     sys.stdout.flush()
+        # train
+        final_input_words = []
+        final_mask_words = []
+        final_output_words = []
+        parallel_model.train()
+        Config.training = True
+        # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
+        for j in range(int(train_ins_tot/Config.batch_size)):
+            batch_data = train_dataloader.next_batch()
+            inputs = {
+                'input_ids':batch_data[0].cuda(),
+                'attention_mask':batch_data[1].cuda(),
+                'mask':batch_data[2].cuda(),
+                'query':batch_data[3].cuda(),
+                'knowledge':batch_data[4].cuda().float(),
+            }        
+            loss = parallel_model(**inputs)
+            loss = loss.mean()
+            with amp.scale_loss(loss, optimizer) as scaled_loss:
+                scaled_loss.backward()
+            nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
+            optimizer.step()
+            scheduler.step()
+            parallel_model.zero_grad()
+            global_step += 1
+            sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
+            sys.stdout.flush()
 
-        #     # final_input_words.append(batch_data[0].tolist())
-        #     # final_mask_words.append(batch_data[2].tolist())
-        #     # final_output_words.append(output.cpu().detach().numpy().tolist())
+            # final_input_words.append(batch_data[0].tolist())
+            # final_mask_words.append(batch_data[2].tolist())
+            # final_output_words.append(output.cpu().detach().numpy().tolist())
 
-        # print("")
-        # # clean gpu memory cache
-        # torch.cuda.empty_cache()
+        print("")
+        # clean gpu memory cache
+        torch.cuda.empty_cache()
         
-        # # save model     
-        # if (i+1) % Config.save_epoch == 0:
-        #     checkpoint = {
-        #         # 'model': model.state_dict(),
-        #         'encoder': model.encoder.state_dict(),
-        #         'selector': model.selector.state_dict(),
-        #         'optimizer':optimizer.state_dict(),
-        #         'amp':amp.state_dict()
-        #     }
-        #     torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
-        #     # json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))
-        #     # json.dump(final_mask_words, open(os.path.join("../output", Config.info+'mask.json'), 'w'))
-        #     # json.dump(final_output_words, open(os.path.join("../output", Config.info+"output.json"), 'w'))
+        # save model     
+        if (i+1) % Config.save_epoch == 0:
+            checkpoint = {
+                # 'model': model.state_dict(),
+                'encoder': model.encoder.state_dict(),
+                'selector': model.selector.state_dict(),
+                'optimizer':optimizer.state_dict(),
+                'amp':amp.state_dict()
+            }
+            torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
+            # json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))
+            # json.dump(final_mask_words, open(os.path.join("../output", Config.info+'mask.json'), 'w'))
+            # json.dump(final_output_words, open(os.path.join("../output", Config.info+"output.json"), 'w'))
         
                 # dev
         if (i+1) % Config.dev_step == 0:
@@ -156,14 +147,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
                 for j in range(dev_iterator):
                     batch_data = dev_dataloader.next_batch()
-                    # inputs = {
-                    #     'input_ids':batch_data[0].cuda(),
-                    #     'attention_mask':batch_data[1].cuda()
-                    # }
                     inputs = {
-                        'word':batch_data["word"].cuda(),
-                        'pos1':batch_data['pos1'].cuda(),
-                        'pos2':batch_data['pos2'].cuda()
+                        'input_ids':batch_data[0].cuda(),
+                        'attention_mask':batch_data[1].cuda()
                     }
                     logit = parallel_model(**inputs)
                     bagTest.update(logit.cpu().detach())
