@@ -56,7 +56,6 @@ class Selector(nn.Module):
         if Config.training:
             if Config.train_bag:
                 bag_repre = []
-                pdb.set_trace()
                 for i in range(scope.shape[0]):
                     bag_hidden_mat = x[scope[i][0]:scope[i][1]]
                     instance_logit = self.softmax(self.__logit__(bag_hidden_mat))
