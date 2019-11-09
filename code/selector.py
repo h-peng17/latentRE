@@ -41,6 +41,8 @@ class Selector(nn.Module):
         self.bias = nn.Parameter(torch.randn(Config.rel_num))
         self.softmax = nn.Softmax(1)
         self.gumbal_softmax = GumbalSoftmax()
+        self.decoder_rel_mat = nn.Parameter(torch.zeros(Config.hidden_size, Config.rel_num))
+
 
         """for mask na relation embedding"""
         random.seed(Config.seed)
@@ -76,7 +78,9 @@ class Selector(nn.Module):
                 # neg_list = (torch.randint(1, 53, (pos_list.size()[0],), device=torch.cuda) + pos_list) % 53
                 # neg_latent = self.rel_mat.transpose(0,1)[neg_list]
 
-                return logit, gumbal_logit
+                latent = torch.matmul(gumbal_logit, self.decoder_rel_mat.transpose(0, 1))
+
+                return logit, latent
         else:
             if Config.eval_bag:
                 bag_logit = []

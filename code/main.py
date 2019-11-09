@@ -133,9 +133,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         if (i+1) % Config.save_epoch == 0:
             checkpoint = {
                 # 'encoder': model.encoder.state_dict(),
-                # 'selector': model.selector.state_dict(),
+                'selector': model.selector.state_dict(),
                 'decoder': model.decoder.state_dict(),
-                'decoder_rel_mat':model.decoder_rel_mat
             }
             torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
             # json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))
