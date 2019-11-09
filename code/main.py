@@ -89,47 +89,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     set_seed(args)
     for i in range(Config.max_epoch):
         
-        
-        
-        # dev
-        if (i+1) % Config.dev_step == 0:
-            with torch.no_grad():
-                print("begin deving...")
-                parallel_model.eval()
-                Config.training = False
-                dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
-                for j in range(dev_iterator):
-                    batch_data = dev_dataloader.next_batch()
-                    # inputs = {
-                    #     'input_ids':batch_data[0].cuda(),
-                    #     'attention_mask':batch_data[1].cuda()
-                    # }
-                    inputs = {
-                        'word':batch_data["word"].cuda(),
-                        'pos1':batch_data['pos1'].cuda(),
-                        'pos2':batch_data['pos2'].cuda()
-                    }
-                    logit = parallel_model(**inputs)
-                    bagTest.update(logit.cpu().detach())
-                    sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
-                    sys.stdout.flush()
-                print("")
-                bagTest.forward(i)  
-                print("---------------------------------------------------------------------------------------------------")
-                #clean gpu memory cache
-                torch.cuda.empty_cache()
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         # train
         final_input_words = []
         final_mask_words = []
@@ -187,6 +146,34 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             # json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))
             # json.dump(final_mask_words, open(os.path.join("../output", Config.info+'mask.json'), 'w'))
             # json.dump(final_output_words, open(os.path.join("../output", Config.info+"output.json"), 'w'))
+        
+                # dev
+        if (i+1) % Config.dev_step == 0:
+            with torch.no_grad():
+                print("begin deving...")
+                parallel_model.eval()
+                Config.training = False
+                dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
+                for j in range(dev_iterator):
+                    batch_data = dev_dataloader.next_batch()
+                    # inputs = {
+                    #     'input_ids':batch_data[0].cuda(),
+                    #     'attention_mask':batch_data[1].cuda()
+                    # }
+                    inputs = {
+                        'word':batch_data["word"].cuda(),
+                        'pos1':batch_data['pos1'].cuda(),
+                        'pos2':batch_data['pos2'].cuda()
+                    }
+                    logit = parallel_model(**inputs)
+                    bagTest.update(logit.cpu().detach())
+                    sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
+                    sys.stdout.flush()
+                print("")
+                bagTest.forward(i)  
+                print("---------------------------------------------------------------------------------------------------")
+                #clean gpu memory cache
+                torch.cuda.empty_cache()
         
         
     # after iterator, save the best perfomance
