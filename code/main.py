@@ -94,7 +94,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         parallel_model.train()
         Config.training = True
         epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
-        for j in epoch_iterator:
+        for j in range(int(train_ins_tot/Config.batch_size)):
             batch_data = train_dataloader.next_batch()
             inputs = {
                 'input_ids':batch_data[0].cuda(),
@@ -118,8 +118,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             # tot += label.shape[0]
             # acc += (output == label).sum()
             
-            # sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, acc/tot, loss))
-            # sys.stdout.flush()
+            sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, acc/tot, loss))
+            sys.stdout.flush()
 
             # final_input_words.append(batch_data[0].tolist())
             # final_mask_words.append(batch_data[2].tolist())
@@ -167,7 +167,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         
         
     # after iterator, save the best perfomance
-    log(bagTest.auc, bagTest.epoch)
+    # log(bagTest.auc, bagTest.epoch)
 
 def test(model, test_dataloader, ins_tot):
     # just for bag test
