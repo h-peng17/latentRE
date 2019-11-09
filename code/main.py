@@ -103,7 +103,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'query':batch_data[3].cuda(),
                 'knowledge':batch_data[4].cuda().float(),
             }        
-            loss, output = parallel_model(**inputs)
+            loss = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
@@ -113,16 +113,15 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             parallel_model.zero_grad()
             global_step += 1
 
-            output = output.cpu().detach().numpy()
-            label = batch_data[3].numpy()
-            tot += label.shape[0]
-            acc += (output == label).sum()
-            
-            sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, (acc/tot), loss))
-            sys.stdout.flush()
-
-            # sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
+            # output = output.cpu().detach().numpy()
+            # label = batch_data[3].numpy()
+            # tot += label.shape[0]
+            # acc += (output == label).sum()
+            # sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, (acc/tot), loss))
             # sys.stdout.flush()
+
+            sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
+            sys.stdout.flush()
 
             # final_input_words.append(batch_data[0].tolist())
             # final_mask_words.append(batch_data[2].tolist())
@@ -135,9 +134,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         # save model     
         if (i+1) % Config.save_epoch == 0:
             checkpoint = {
-                'encoder': model.encoder.state_dict(),
+                # 'encoder': model.encoder.state_dict(),
                 'selector': model.selector.state_dict(),
-                # 'decoder': model.decoder.state_dict(),
+                'decoder': model.decoder.state_dict(),
             }
             torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
             # json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))
