@@ -93,7 +93,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         final_output_words = []
         parallel_model.train()
         Config.training = True
-        epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
+        # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
         for j in range(int(train_ins_tot/Config.batch_size)):
             batch_data = train_dataloader.next_batch()
             inputs = {

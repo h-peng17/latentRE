@@ -34,7 +34,7 @@ class LatentRE(nn.Module):
         self.decoder = BertDecoder()
         self.decoder.load_state_dict(decoder_ckpt['decoder'])
         self.decoder_rel_mat = nn.Parameter(torch.zeros(Config.hidden_size, Config.rel_num))
-        self.decoder_rel_mat.load_state_dict(decoder_ckpt['decoder_rel_mat'])
+        self.decoder_rel_mat.fill_(decoder_ckpt['decoder_rel_mat'])
         self.loss = Loss(weight)
         
     def forward(self, 
