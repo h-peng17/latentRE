@@ -166,9 +166,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
             sys.stdout.flush()
 
-            final_input_words.append(batch_data[0].tolist())
-            final_mask_words.append(batch_data[2].tolist())
-            final_output_words.append(output.cpu().detach().numpy().tolist())
+            # final_input_words.append(batch_data[0].tolist())
+            # final_mask_words.append(batch_data[2].tolist())
+            # final_output_words.append(output.cpu().detach().numpy().tolist())
 
         print("")
         # clean gpu memory cache
@@ -183,10 +183,10 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'optimizer':optimizer.state_dict(),
                 'amp':amp.state_dict()
             }
-            # torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
-            json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))
-            json.dump(final_mask_words, open(os.path.join("../output", Config.info+'mask.json'), 'w'))
-            json.dump(final_output_words, open(os.path.join("../output", Config.info+"output.json"), 'w'))
+            # # torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
+            # json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))
+            # json.dump(final_mask_words, open(os.path.join("../output", Config.info+'mask.json'), 'w'))
+            # json.dump(final_output_words, open(os.path.join("../output", Config.info+"output.json"), 'w'))
         
         
     # after iterator, save the best perfomance
