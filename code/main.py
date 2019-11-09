@@ -108,13 +108,13 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             }        
             loss, output = parallel_model(**inputs)
             loss = loss.mean()
-            with amp.scale_loss(loss, optimizer) as scaled_loss:
-                scaled_loss.backward()
-            nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
-            optimizer.step()
-            scheduler.step()
-            parallel_model.zero_grad()
-            global_step += 1
+            # with amp.scale_loss(loss, optimizer) as scaled_loss:
+            #     scaled_loss.backward()
+            # nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
+            # optimizer.step()
+            # scheduler.step()
+            # parallel_model.zero_grad()
+            # global_step += 1
 
             output = output.cpu().detach().numpy()
             label = batch_data[3].numpy()
