@@ -21,11 +21,11 @@ class LatentRE(nn.Module):
         super(LatentRE, self).__init__()
         self.encoder = TextRepre(word_vec)
         # ''' load encoder '''
-        # checkpoint = torch.load(os.path.join(Config.save_path, "ckptencoder1"))
-        # self.encoder = Bert()
-        # self.encoder.load_state_dict(checkpoint["encoder"])
-        # for param in self.encoder.parameters():
-        #     param.requires_grad = False # frozen
+        checkpoint = torch.load(os.path.join(Config.save_path, "ckptcnn24"))
+        self.encoder = Bert()
+        self.encoder.load_state_dict(checkpoint["encoder"])
+        for param in self.encoder.parameters():
+            param.requires_grad = False # frozen
         # self.encoder = Bert()
         self.selector = Selector()
         # self.decoder = BertDecoder()
