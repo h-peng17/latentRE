@@ -142,7 +142,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'optimizer':optimizer.state_dict(),
                 'amp':amp.state_dict()
             }
-            # # torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
+            torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
             # json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))
             # json.dump(final_mask_words, open(os.path.join("../output", Config.info+'mask.json'), 'w'))
             # json.dump(final_output_words, open(os.path.join("../output", Config.info+"output.json"), 'w'))
