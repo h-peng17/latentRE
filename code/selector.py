@@ -42,7 +42,7 @@ class Selector(nn.Module):
 
         # for test
         nn.init.xavier_normal_(self.rel_mat)
-        nn.init.xavier_normal_(self.bias)
+        # nn.init.xavier_normal_(self.bias)
 
         self.softmax = nn.Softmax(1)
         self.gumbal_softmax = GumbalSoftmax()
