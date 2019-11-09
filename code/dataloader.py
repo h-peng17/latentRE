@@ -449,8 +449,6 @@ class Dataloader:
             _word = []
             _pos1 = []
             _pos2 = []
-            _ids = []
-            _mask = []
             _rel = []
             _label = []
             _multi_rel = []
@@ -460,8 +458,6 @@ class Dataloader:
                 _word.append(self.data_word[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _pos1.append(self.data_pos1[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _pos2.append(self.data_pos2[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
-                _ids.append(self.data_input_ids[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
-                _mask.append(self.data_attention_mask[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _rel.append(self.data_query[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _label.append(self.data_query[self.scope[self.order[i]][0]])
                 bag_size = self.scope[self.order[i]][1] - self.scope[self.order[i]][0]
