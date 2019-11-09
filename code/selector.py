@@ -39,6 +39,11 @@ class Selector(nn.Module):
         super(Selector, self).__init__()
         self.rel_mat = nn.Parameter(torch.randn(Config.hidden_size, Config.rel_num))
         self.bias = nn.Parameter(torch.randn(Config.rel_num))
+
+        # for test
+        nn.init.xavier_normal_(self.rel_mat)
+        nn.init.xavier_normal_(self.bias)
+
         self.softmax = nn.Softmax(1)
         self.gumbal_softmax = GumbalSoftmax()
 
