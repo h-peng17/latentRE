@@ -33,6 +33,9 @@ class LatentRE(nn.Module):
         self.selector.load_state_dict(decoder_ckpt['selector'])
         self.decoder = BertDecoder()
         self.decoder.load_state_dict(decoder_ckpt['decoder'])
+        for param in self.decoder.parameters():
+            param.requires_grad = False
+        self.selector.decoder_rel_mat.requires_grad = False
         self.loss = Loss(weight)
         
     def forward(self, 
