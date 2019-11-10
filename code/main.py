@@ -103,7 +103,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'query':batch_data[3].cuda(),
                 'knowledge':batch_data[4].cuda().float(),
             }        
-            loss = parallel_model(**inputs)
+            loss, output = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
@@ -113,15 +113,15 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             parallel_model.zero_grad()
             global_step += 1
 
-            # output = output.cpu().detach().numpy()
-            # label = batch_data[3].numpy()
-            # tot += label.shape[0]
-            # acc += (output == label).sum()
-            # sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, (acc/tot), loss))
-            # sys.stdout.flush()
-
-            sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
+            output = output.cpu().detach().numpy()
+            label = batch_data[3].numpy()
+            tot += label.shape[0]
+            acc += (output == label).sum()
+            sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, (acc/tot), loss))
             sys.stdout.flush()
+
+            # sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
+            # sys.stdout.flush()
 
             # final_input_words.append(batch_data[0].tolist())
             # final_mask_words.append(batch_data[2].tolist())
