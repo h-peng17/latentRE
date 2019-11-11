@@ -49,21 +49,30 @@ class LatentRE(nn.Module):
                   query=None,
                   knowledge=None, 
                   scope=None):
+        # if Config.training:
+        #     text = self.encoder(input_ids, attention_mask)
+        #     logit, latent = self.selector(text, scope, query)
+        #     ce_loss = self.loss.ce_loss(logit, query)
+        #     kl_loss = self.loss.kl_loss(logit, knowledge)
+        #     if Config.latent:
+        #         gen_loss = self.decoder(input_ids, attention_mask, mask, latent)
+        #         return kl_loss * Config.kl_loss_scale + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale
+        #     else:
+        #         return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale, torch.argmax(logit, 1)
+        # else:
+        #     text = self.encoder(input_ids, attention_mask)
+        #     logit = self.selector(text, scope)
+        #     return logit
         if Config.training:
-            text = self.encoder(input_ids, attention_mask)
-            logit, latent = self.selector(text, scope, query)
+            latent = self.selector.rel_mat[:, query].transpose(0,1)
+            text = self.encoder(input_ids, attention_mask, latent, mask)
+            logit, _ = self.selector(text, scope, query)
             ce_loss = self.loss.ce_loss(logit, query)
-            kl_loss = self.loss.kl_loss(logit, knowledge)
-            if Config.latent:
-                gen_loss = self.decoder(input_ids, attention_mask, mask, latent)
-                return kl_loss * Config.kl_loss_scale + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale
-            else:
-                return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale, torch.argmax(logit, 1)
+            return ce_loss, torch.argmax(logit, 1)
         else:
             text = self.encoder(input_ids, attention_mask)
             logit = self.selector(text, scope)
-            return logit
-
+            return logit 
             
         
 

@@ -85,13 +85,15 @@ class Bert(nn.Module):
         self.tokenizer = tokenizer_class.from_pretrained(Config.model_name_or_path, do_lower_case=True)
         self.model = model_class.from_pretrained(Config.model_name_or_path, from_tf=bool('.ckpt' in Config.model_name_or_path), config=config)
 
-    def forward(self, input_ids, attention_mask):
+    def forward(self, input_ids, attention_mask, latent=None, mask=None):
         '''
         text: `(batch_size, hidden_size)`
         '''
         inputs = {
             'input_ids':input_ids,
-            'attention_mask':attention_mask
+            'attention_mask':attention_mask,
+            'latent':latent,
+            'mask':mask
         }
 
         outputs = self.model(**inputs)
