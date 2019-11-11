@@ -64,8 +64,8 @@ class LatentRE(nn.Module):
         #     logit = self.selector(text, scope)
         #     return logit
         if Config.training:
-            latent = self.selector.rel_mat[:, query].transpose(0,1)
-            text = self.encoder(input_ids, attention_mask, latent, mask)
+            # latent = self.selector.rel_mat[:, query].transpose(0,1)
+            text = self.encoder(input_ids, attention_mask, None, None)
             logit, _ = self.selector(text, scope, query)
             ce_loss = self.loss.ce_loss(logit, query)
             return ce_loss, torch.argmax(logit, 1)
