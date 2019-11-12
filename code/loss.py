@@ -12,7 +12,7 @@ class Loss(nn.Module):
         super(Loss, self).__init__()
         self.kl = nn.KLDivLoss(reduction="batchmean")   
         # weight=torch.from_numpy(weight).to(torch.float32)
-        self.crossEntropy = nn.CrossEntropyLoss()
+        self.crossEntropy = nn.CrossEntropyLoss(weight=torch.from_numpy(weight).to(torch.float32))
         self.neg_crossEntropy = nn.CrossEntropyLoss(reduction='sum')
         self.softmax = nn.Softmax(dim=1)
 

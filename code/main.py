@@ -103,21 +103,28 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             #     'query':batch_data[3].cuda(),
             #     'knowledge':batch_data[4].cuda().float(),
             # } 
+            # inputs = {
+            #     'pos_word':batch_data['pos_word'].cuda(),
+            #     'pos_pos1':batch_data['pos_pos1'].cuda(),
+            #     'pos_pos2':batch_data['pos_pos2'].cuda(),
+            #     'pos_label':batch_data['pos_label'].cuda(),
+            #     'pos_query':batch_data['pos_query'].cuda(),
+            #     'pos_scope':batch_data['pos_scope'],
+            #     'neg_word':batch_data['neg_word'].cuda(),
+            #     'neg_pos1':batch_data['neg_pos1'].cuda(),
+            #     'neg_pos2':batch_data['neg_pos2'].cuda(),
+            #     'neg_label':batch_data['neg_label'].cuda(),
+            #     'one_neg_label':batch_data['one_neg_label'].cuda(),
+            #     'mul_label':batch_data['mul_label'].cuda(),
+            #     'mul_num':batch_data['mul_num'].cuda(),
+            #     'neg_scope':batch_data['neg_scope'],
+            # }
             inputs = {
-                'pos_word':batch_data['pos_word'].cuda(),
-                'pos_pos1':batch_data['pos_pos1'].cuda(),
-                'pos_pos2':batch_data['pos_pos2'].cuda(),
-                'pos_label':batch_data['pos_label'].cuda(),
-                'pos_query':batch_data['pos_query'].cuda(),
-                'pos_scope':batch_data['pos_scope'],
-                'neg_word':batch_data['neg_word'].cuda(),
-                'neg_pos1':batch_data['neg_pos1'].cuda(),
-                'neg_pos2':batch_data['neg_pos2'].cuda(),
-                'neg_label':batch_data['neg_label'].cuda(),
-                'one_neg_label':batch_data['one_neg_label'].cuda(),
-                'mul_label':batch_data['mul_label'].cuda(),
-                'mul_num':batch_data['mul_num'].cuda(),
-                'neg_scope':batch_data['neg_scope'],
+                'word':batch_data['word'].cuda(),
+                'pos1':batch_data['pos1'].cuda(),
+                'pos2':batch_data['pos2'].cuda(),
+                'label':batch_data['label'].cuda(),
+                'scope':batch_data['scope']
             }
 
             loss = parallel_model(**inputs)
@@ -174,9 +181,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                     #     'attention_mask':batch_data[1].cuda()
                     # }
                     inputs = {
-                        'pos_word':batch_data['word'].cuda(),
-                        'pos_pos1':batch_data['pos1'].cuda(),
-                        'pos_pos2':batch_data['pos2'].cuda(),
+                        'word':batch_data['word'].cuda(),
+                        'pos1':batch_data['pos1'].cuda(),
+                        'pos2':batch_data['pos2'].cuda(),
                     }
                     logit = parallel_model(**inputs)
                     bagTest.update(logit.cpu().detach())
@@ -299,9 +306,9 @@ if __name__ == "__main__":
     
     if args.mode == "train":
         # train
-        train_dataloader = AdvDataloader('train')
-        dev_dataloader = AdvDataloader('test')
-        model = LatentRE(train_dataloader.word_vec, None)
+        train_dataloader = Dataloader('train', 'relfact' if Config.train_bag else 'ins', Config.dataset)
+        dev_dataloader = Dataloader('test', 'entpair' if Config.eval_bag else 'ins', Config.dataset)
+        model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
         model.cuda()
         train(args,
               model, 
