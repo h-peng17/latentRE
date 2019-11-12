@@ -94,7 +94,7 @@ class LatentRE(nn.Module):
             # neg_logit = F.softmax(neg_logit, 1)
             # neg_score = torch.mean(torch.sum(neg_logit * mul_label.float(), 1)/mul_num.float()) # should be 0
             # neg_pos_score = torch.mean(torch.sum(neg_logit * neg_label.float(), 1)) # should be 1
-            neg_loss = self.loss.ce_loss(neg_logit, one_neg_label)
+            neg_loss = self.loss.ce_loss_neg(neg_logit, one_neg_label) / len(pos_scope)
 
 
             # return - pos_score + 1.0
