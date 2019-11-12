@@ -380,17 +380,17 @@ class Dataloader:
         self.relfact_tot = len(self.relfact2scope)
 
         # mask mode 
-        if self.mode == "train":
-            if Config.mask_mode == "entity":
-                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
-            elif Config.mask_mode == "between":
-                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_between_entity_mask.npy"))
-            elif Config.mask_mode == "origin":
-                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
-            elif Config.mask_mode == "governor":
-                self.data_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_governor_mask_index.npy"))
-            else:
-                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
+        # if self.mode == "train":
+        #     if Config.mask_mode == "entity":
+        #         self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
+        #     elif Config.mask_mode == "between":
+        #         self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_between_entity_mask.npy"))
+        #     elif Config.mask_mode == "origin":
+        #         self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
+        #     elif Config.mask_mode == "governor":
+        #         self.data_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_governor_mask_index.npy"))
+        #     else:
+        #         self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
         
         # order to train and scope to train
         self.flag = flag
