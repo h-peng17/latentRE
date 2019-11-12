@@ -920,7 +920,7 @@ class AdvDataloader:
 
 
         '''len(relfact2scope) should equals to len(neg_pos_relfact2scope) '''
-        neg_bag_size = 20
+        neg_bag_size = 40
         neg_pos_relfact2scope = {}
         neg_pos_relfact2rel = {}
         negative_sample_instance = []
@@ -952,10 +952,13 @@ class AdvDataloader:
             if tail_neg_sample_scopelist != -1:
                 ori_neg_sample_scopelist.extend(tail_neg_sample_scopelist)
             neg_sample_scopelist = []
-            id0 = random.randint(0, len(ori_neg_sample_scopelist)-1)
-            step = int(len(ori_neg_sample_scopelist) / neg_bag_size)
-            for j in range(neg_bag_size):
-                neg_sample_scopelist.append(ori_neg_sample_scopelist[(id0+j*step)%len(ori_neg_sample_scopelist)])
+            if len(ori_neg_sample_scopelist) > neg_bag_size:
+                id0 = random.randint(0, len(ori_neg_sample_scopelist)-1)
+                step = int(len(ori_neg_sample_scopelist) / neg_bag_size)
+                for j in range(neg_bag_size):
+                    neg_sample_scopelist.append(ori_neg_sample_scopelist[(id0+j*step)%len(ori_neg_sample_scopelist)])
+            else:
+                neg_sample_scopelist.extend(ori_neg_sample_scopelist)
 
             for scope in neg_sample_scopelist:
                 randindex = random.randint(scope[0], scope[1]-1)
