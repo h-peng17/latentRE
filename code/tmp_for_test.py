@@ -58,6 +58,7 @@ class BagTest(object):
         res_list = []
         tot = 0
         for i in range(len(logit)):
+            pdb.set_trace()
             for j in range(1, len(logit[i])):
                 tot += label[i][j]
                 res_list.append([logit[i][j], label[i][j]])
