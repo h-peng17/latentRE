@@ -617,7 +617,7 @@ class AdvDataloader:
                 data_word = np.zeros((instance_tot, Config.sen_len), dtype=int)
                 data_pos1 = np.zeros((instance_tot, Config.sen_len), dtype=int)
                 data_pos2 = np.zeros((instance_tot, Config.sen_len), dtype=int)
-                data_query = np.zeros((instance_tot, Config.rel_num), dtype=int)
+                data_query = np.zeros((instance_tot,), dtype=int)
 
                 for i in range(len(data)):
                     instance = data[i]
