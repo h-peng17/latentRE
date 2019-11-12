@@ -16,6 +16,7 @@ import time
 import os
 
 
+
 class LatentRE(nn.Module):
     def __init__(self, word_vec, weight=None):
         super(LatentRE, self).__init__()
@@ -82,13 +83,16 @@ class LatentRE(nn.Module):
             Config.train_bag = True
             pos_text = self.encoder(pos_word, pos_pos1, pos_pos2)
             pos_logit = self.selector(pos_text, pos_scope, pos_query)
+            pos_logit = F.softmax(pos_logit, 1)
             pos_score = torch.mean(torch.sum(pos_logit * pos_label.float(), 1)) #should be 1
 
             Config.train_bag = False
             neg_text = self.encoder(neg_word, neg_pos1, neg_pos2)
             neg_logit, _ = self.selector(neg_text, None, None)
+            neg_logit = F.softmax(neg_logit, 1)
             neg_score = torch.mean(torch.sum(neg_logit * mul_label.float(), 1)/mul_num.float()) # should be 0
             neg_pos_score = torch.mean(torch.sum(neg_logit * neg_label.float(), 1)) # should be 1
+
 
             return neg_score - pos_score - neg_pos_score + 2.0
         else:
