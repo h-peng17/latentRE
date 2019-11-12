@@ -94,7 +94,7 @@ class LatentRE(nn.Module):
             neg_pos_score = torch.mean(torch.sum(neg_logit * neg_label.float(), 1)) # should be 1
 
 
-            return neg_score - pos_score - neg_pos_score + 2.0
+            return neg_score - pos_score + 1.0
         else:
             text = self.encoder(pos_word, pos_pos1, pos_pos2)
             logit = self.selector(text, None, None)
