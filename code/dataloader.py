@@ -375,7 +375,7 @@ class Dataloader:
             Config.word_tot = len(self.word_vec) + 2
             Config.word_embeeding_dim = len(self.word_vec[0])
             print("Finish loading...")
-            self.instance_tot = self.data_input_ids.shape[0]
+            self.instance_tot = self.data_word.shape[0]
         self.entpair_tot = len(self.entpair2scope)
         self.relfact_tot = len(self.relfact2scope)
 
