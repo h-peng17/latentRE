@@ -24,7 +24,6 @@ class BagTest(object):
         # scope.size(): `(num_bag, 2)`
         # label.size(): `()`
         # multi_label.size(): `(num_bag, rel_num)` 
-        
         self.logit = torch.zeros((0, Config.rel_num))
         entpair_tot = len(entpair2scope)
         # scope
