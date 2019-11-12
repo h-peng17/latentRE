@@ -46,14 +46,14 @@ class Dataloader:
         self.mode = mode
         if not os.path.exists("../data/pre_processed_data"):
             os.mkdir("../data/pre_processed_data")
-        if not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_query.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_length.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_relfact2scope.json")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_input_ids.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_attention_mask.npy")) or \
-        not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy")):
+        if not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_query.npy")):
+        # not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_length.npy")) or \
+        # not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy")) or \
+        # not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json")) or \
+        # not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_relfact2scope.json")) or \
+        # not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_input_ids.npy")) or \
+        # not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_attention_mask.npy")) or \
+        # not os.path.exists(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy")):
             print("There dones't exist pre-processed data, pre-processing...")
             start_time = time.time()
             data = json.load(open(os.path.join("../data/"+dataset, mode+".json")))
@@ -426,7 +426,7 @@ class Dataloader:
             idx1 = len(self.order)
         self.idx = idx1
         if self.flag == "ins":
-            # index = self.order[idx0:idx1]
+            index = self.order[idx0:idx1]
             # max_length = self.data_length[index].max()
             # if Config.training:
             #     return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
