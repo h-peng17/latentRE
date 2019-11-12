@@ -478,7 +478,534 @@ class Dataloader:
 
             return batch_data
 
+class AdvDataloader:
+    def __init__(self, mode):
+        if mode == 'train':
+            if not os.path.exists("../data/nyt/postive_train.json"):
+                self.genBag()
+            if not os.path.exists("../pre_processed_data/train_positive_word"):
+                print("begin pre processing train data")
+                positive_train = json.load(open("../data/nyt/postive_train.json"))
+                negative_train = json.load(open("../data/nyt/negative_train.json"))
+                negative_relfact2rel = json.load(open("../data/nyt/negative_relfact2rel.json"))
+                negative_relfact2scope = json.load(open("../data/nyt/negative_relfact2scope.json"))
+                
+                ori_word_vec = json.load(open(os.path.join("../data/"+dataset,"word_vec.json")))
+                Config.word_tot = len(ori_word_vec) + 2
+                
+                # process word vec
+                word2id = {}
+                word2id["blk"] = 0
+                word2id["unk"] = 1
+                for word in ori_word_vec:
+                    w = word["word"].lower()
+                    word2id[w] = len(word2id)
+                
+                # process rel2id
+                rel2id = json.load(open(os.path.join("../data/"+dataset,"rel2id.json")))
+                Config.rel_num = len(rel2id)
 
+                # process word_vec
+                word_vec = []
+                word_vec.append(np.zeros((len(ori_word_vec[0]["vec"]))))
+                word_vec.append(np.random.random_sample(len(ori_word_vec[0]["vec"])))
+                for word in ori_word_vec:
+                    word_vec.append(word["vec"])
+                word_vec = np.asarray(word_vec)
+                Config.word_embeeding_dim = len(word_vec[0])
+
+                np.save(os.path.join("../data/pre_processed_data", "word_vec.npy"), word_vec)
+                self.convert(positive_train, word2id, rel2id, 'positive')
+                self.convert(negative_train, word2id, rel2id, 'negative')
+
+                data_multi_query = np.zeros((len(negative_train), Config.rel_num), type=int)
+                for key in negative_relfact2scope.keys():
+                    scope = negative_relfact2scope[key]
+                    ori_rels = negative_relfact2rel[key]
+                    rels = []
+                    for rel in ori_rels:
+                        try:
+                            rels.append(rel2id[rel])
+                        except:
+                            rels.append(0)
+                    for i in range(scope[0], scope[1]):
+                        data_multi_query[i][rels] = 1
+                np.save(os.path.join("../data/pre_processed_data", "train_multi_query.npy"), data_multi_query)
+
+                pos_one_query = np.zeros((len(positive_train),), type=int)
+                for ins in positive_train:
+                    try:
+                        pos_one_query[i] = rel2id[ins['relation']]
+                    except:
+                        pos_one_query[i] = 0
+                np.save(os.path.join("../data/pre_processed_data", "train_one_query.npy"), pos_one_query)
+
+
+            print("loading")                
+            self.train_positive_word = np.load(os.path.join("../data/pre_processed_data", "train_positive_word.npy"))
+            self.train_positive_pos1 = np.load(os.path.join("../data/pre_processed_data", "train_positive_pos1.npy"))
+            self.train_positive_pos2 = np.load(os.path.join("../data/pre_processed_data", "train_positive_pos2.npy"))
+            self.train_positive_query = np.load(os.path.join("../data/pre_processed_data", "train_positive_query.npy"))
+            self.train_negative_word = np.load(os.path.join("../data/pre_processed_data", "train_negative_word.npy"))
+            self.train_negative_pos1 = np.load(os.path.join("../data/pre_processed_data", "train_negative_pos1.npy"))
+            self.train_negative_pos2 = np.load(os.path.join("../data/pre_processed_data", "train_negative_pos2.npy"))
+            self.train_negative_query = np.load(os.path.join("../data/pre_processed_data", "train_negative_query.npy"))
+            self.train_one_query = np.load(os.path.join("../data/pre_processed_data", "train_one_query.npy"))
+            self.train_multi_query = np.load(os.path.join("../data/pre_processed_data", "train_multi_query.npy"))
+            self.positive_relfact2scope = json.load(os.path.join("../data/nyt/positive_relfact2scope.json"))
+            self.negative_relfact2scope = json.load(os.path.join("../data/nyt/negative_relfact2scope.json"))
+            self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
+            Config.rel_num = len(json.load(open(os.path.join("../data/nyt", "rel2id.json"))))
+            Config.word_tot = len(self.word_vec) + 2
+            Config.word_embeeding_dim = len(self.word_vec[0])
+
+            if len(self.positive_relfact2scope) != len(self.negative_relfact2scope):
+                exit("error!!!!")
+            self.relfact_tot = len(self.positive_relfact2scope)
+            self.order = list(range(self.relfact_tot))
+            self.positive_scope = []
+            for key in self.positive_relfact2scope.keys():
+                self.positive_scope.append(self.positive_relfact2scope[key])
+            self.negative_scope = []
+            for key in self.negative_relfact2scope.keys():
+                self.negative_scope.append(self.negative_relfact2scope[key])
+            self.idx = 0
+        
+        elif mode == "test":
+            if not os.path.exists("../pre_processed_data/test_word"):
+                print("pre processing test data")
+                data = json.load(open('../data/nyt/test.json'))
+                ori_word_vec = json.load(open(os.path.join("../data/"+dataset,"word_vec.json")))
+                Config.word_tot = len(ori_word_vec) + 2
+                
+                # process word vec
+                word2id = {}
+                word2id["blk"] = 0
+                word2id["unk"] = 1
+                for word in ori_word_vec:
+                    w = word["word"].lower()
+                    word2id[w] = len(word2id)
+                
+                # process rel2id
+                rel2id = json.load(open(os.path.join("../data/"+dataset,"rel2id.json")))
+                Config.rel_num = len(rel2id)
+
+                # process word_vec
+                word_vec = []
+                word_vec.append(np.zeros((len(ori_word_vec[0]["vec"]))))
+                word_vec.append(np.random.random_sample(len(ori_word_vec[0]["vec"])))
+                for word in ori_word_vec:
+                    word_vec.append(word["vec"])
+                word_vec = np.asarray(word_vec)
+                Config.word_embeeding_dim = len(word_vec[0])
+
+                # sort data by head and tail and get entities-pos dict          
+                data.sort(key=lambda a: a['head']['id'] + '#' + a['tail']['id'] + "#" + a["relation"])   
+                entities_pos_dict = {}    
+                curr_entities = data[0]["head"]["id"]+"#"+data[0]["tail"]["id"]
+                entities_pos_dict[curr_entities] = [0,] 
+                for i, instance in enumerate(data):
+                    entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
+                    if entities!=curr_entities:
+                        entities_pos_dict[curr_entities].append(i)
+                        curr_entities = entities
+                        entities_pos_dict[curr_entities] = [i,]
+                entities_pos_dict[curr_entities].append(len(data))
+
+                for i in range(len(data)):
+                    instance = data[i]
+                    head = instance["head"]["word"].lower()
+                    tail = instance["tail"]["word"].lower()
+                    sentence = instance["sentence"].lower()
+                    try:
+                        self.data_query[i] = rel2id[instance["relation"]]
+                    except:
+                        self.data_query[i] = 0
+                        print("relation error 1")
+
+                    p1 = sentence.find(' ' + head + ' ')
+                    p2 = sentence.find(' ' + tail + ' ')
+                    if p1 == -1:
+                        if sentence[:len(head) + 1] == head + " ":
+                            p1 = 0
+                        elif sentence[-len(head) - 1:] == " " + head:
+                            p1 = len(sentence) - len(head)
+                        else:
+                            p1 = 0 # shouldn't happen
+                    else:
+                        p1 += 1
+                    if p2 == -1:
+                        if sentence[:len(tail) + 1] == tail + " ":
+                            p2 = 0
+                        elif sentence[-len(tail) - 1:] == " " + tail:
+                            p2 = len(sentence) - len(tail)
+                        else:
+                            p2 = 0 # shouldn't happen
+                    else:
+                        p2 += 1
+                    words = sentence.split()
+                    cur_ref_data_word = self.data_word[i]         
+                    cur_pos = 0
+                    pos1 = -1
+                    pos2 = -1
+                    for j, word in enumerate(words):
+                        if j < Config.sen_len:
+                            word = word.lower()
+                            if word in word2id:
+                                cur_ref_data_word[j] = word2id[word]
+                            else:
+                                cur_ref_data_word[j] = 1
+                        if cur_pos == p1:
+                            pos1 = j
+                            p1 = -1
+                        if cur_pos == p2:
+                            pos2 = j
+                            p2 = -1
+                        cur_pos += len(word) + 1
+                    for j in range(j + 1, Config.sen_len):
+                        cur_ref_data_word[j] = 0
+                    if pos1 == -1 or pos2 == -1:
+                        raise Exception("[ERROR] Position error, index = {}, sentence = {}, head = {}, tail = {}".format(i, sentence, head, tail))
+                    if pos1 >= Config.sen_len:
+                        pos1 = Config.sen_len - 1
+                    if pos2 >= Config.sen_len:
+                        pos2 = Config.sen_len - 1
+                    for j in range(Config.sen_len):
+                        self.data_pos1[i][j] = j - pos1 + Config.sen_len
+                        self.data_pos2[i][j] = j - pos2 + Config.sen_len
+                
+                np.save(os.path.join("../data/pre_processed_data", "test_word.npy"), data_word)
+                np.save(os.path.join("../data/pre_processed_data", "test_pos1.npy"), data_pos1)
+                np.save(os.path.join("../data/pre_processed_data", "test_pos2.npy"), data_pos2)
+                np.save(os.path.join("../data/pre_processed_data", "test_query.npy"), data_query)
+                json.dump(entities_pos_dict, open(os.path.join("../data/pre_processed_data", "test_entpair2scope.json"),'w'))
+
+            print("loading test data")
+            self.data_word = np.load(os.path.join("../data/pre_processed_data", "test_word.npy"))
+            self.data_pos1 = np.load(os.path.join("../data/pre_processed_data", "test_pos1.npy"))
+            self.data_pos2 = np.load(os.path.join("../data/pre_processed_data", "test_pos2.npy"))
+            self.data_query = np.load(os.path.join("../data/pre_processed_data", "test_query.npy"))
+            self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", "test_entpair2scope.json")))
+            Config.rel_num = len(json.load(open(os.path.join("../data/nyt", "rel2id.json"))))
+            Config.word_tot = len(self.word_vec) + 2
+            Config.word_embeeding_dim = len(self.word_vec[0])
+
+            self.instance_tot = len(self.data_word)
+            self.order = list(range(self.instance_tot))
+            self.idx = 0
+
+    def train_next_batch(self):
+        if self.idx >= len(self.order):
+            random.shuffle(self.order)
+            self.idx = 0
+        idx0 = self.idx
+        idx1 = self.idx + Config.batch_size
+        if idx1 > len(self.order):
+            idx1 = len(self.order)
+        self.idx = idx1
+        batch_data = {}
+        _word = []
+        _pos1 = []
+        _pos2 = []
+        _one_query = []
+        _label = []
+        _scope = []
+        cur_pos = 0
+        for i in range(idx0, idx1):
+            _word.append(self.train_positive_word[self.positive_scope[self.order[i]][0]:self.positive_scope[self.order[i]][1]])
+            _pos1.append(self.train_positive_pos1[self.positive_scope[self.order[i]][0]:self.positive_scope[self.order[i]][1]])
+            _pos2.append(self.train_positive_pos2[self.positive_scope[self.order[i]][0]:self.positive_scope[self.order[i]][1]])
+            _label.append(self.train_positive_query[self.positive_scope[self.order[i]][0]])
+            _one_query.append(self.train_one_query[self.positive_scope[self.order[i]][0]])
+            bag_size = self.positive_scope[self.order[i]][1] - self.positive_scope[self.order[i]][0]
+            _scope.append([cur_pos, cur_pos + bag_size])
+            cur_pos = cur_pos + bag_size
+        batch_data['pos_word'] = self.to_tensor(np.concatenate(_word))
+        batch_data['pos_pos1'] = self.to_tensor(np.concatenate(_pos1))
+        batch_data['pos_pos2'] = self.to_tensor(np.concatenate(_pos2))
+        batch_data['pos_label'] = self.to_tensor(np.stack(_label))
+        batch_data['pos_query'] = self.to_tensor(np.stack(_one_query))
+        batch_data['pos_scope'] = np.stack(_scope)
+
+        # negative sample
+        _word = []
+        _pos1 = []
+        _pos2 = []
+        _label = []
+        _scope = []
+        _multi_label = []
+        cur_pos = 0
+        for i in range(idx0, idx1):
+            _word.append(self.train_negative_word[self.negative_scope[self.order[i]][0]:self.negative_scope[self.order[i]][1]])
+            _pos1.append(self.train_negative_pos1[self.negative_scope[self.order[i]][0]:self.negative_scope[self.order[i]][1]])
+            _pos2.append(self.train_negative_pos2[self.negative_scope[self.order[i]][0]:self.negative_scope[self.order[i]][1]])
+            _multi_label.append(self.train_multi_query[self.negative_scope[self.order[i]][0]:self.negative_scope[self.order[i]][1]])
+            _label.append(self.train_negative_query[self.negative_scope[self.order[i]][0]:self.negative_scope[self.order[i]][1]])
+            bag_size = self.negative_scope[self.order[i]][1] - self.negative_scope[self.order[i]][0]
+            _scope.append([cur_pos, cur_pos + bag_size])
+            cur_pos = cur_pos + bag_size
+        batch_data['neg_word'] = self.to_tensor(np.concatenate(_word))
+        batch_data['neg_pos1'] = self.to_tensor(np.concatenate(_pos1))
+        batch_data['neg_pos2'] = self.to_tensor(np.concatenate(_pos2))
+        batch_data['mul_label'] = self.to_tensor(np.concatenate(_multi_label))
+        batch_data['neg_label'] = self.to_tensor(np.concatenate(_label))
+        batch_data['neg_scope'] = np.stack(_scope)
+
+        return batch_data
+    
+    def test_next_batch(self):
+        if self.idx >= len(self.order):
+            self.idx = 0
+        idx0 = self.idx
+        idx1 = self.idx + Config.batch_size
+        if idx1 > len(self.order):
+            idx1 = len(self.order)
+        self.idx = idx1
+            index = self.order[idx0:idx1]
+            batch_data = {}
+            batch_data["word"] = self.to_tensor(self.data_word[index])
+            batch_data["pos1"] = self.to_tensor(self.data_pos1[index])
+            batch_data["pos2"] = self.to_tensor(self.data_pos2[index])
+            return batch_data
+    
+    def convert(self, data, word2id, rel2id, mode):
+        print("begin converting....")
+        instance_tot = len(data)
+        data_word = np.zeros((instance_tot, Config.sen_len), dtype=int)
+        data_pos1 = np.zeros((instance_tot, Config.sen_len), dtype=int)
+        data_pos2 = np.zeros((instance_tot, Config.sen_len), dtype=int)
+        data_query = np.zeros((instance_tot, Config.rel_num), dtype=int)
+
+        
+        for i in range(len(data)):
+            instance = data[i]
+            head = instance["head"]["word"].lower()
+            tail = instance["tail"]["word"].lower()
+            sentence = instance["sentence"].lower()
+            try:
+                self.data_query[i][rel2id[instance["relation"]]] = 1
+            except:
+                self.data_query[i][0] = 1
+                print("relation error 1")
+
+            p1 = sentence.find(' ' + head + ' ')
+            p2 = sentence.find(' ' + tail + ' ')
+            if p1 == -1:
+                if sentence[:len(head) + 1] == head + " ":
+                    p1 = 0
+                elif sentence[-len(head) - 1:] == " " + head:
+                    p1 = len(sentence) - len(head)
+                else:
+                    p1 = 0 # shouldn't happen
+            else:
+                p1 += 1
+            if p2 == -1:
+                if sentence[:len(tail) + 1] == tail + " ":
+                    p2 = 0
+                elif sentence[-len(tail) - 1:] == " " + tail:
+                    p2 = len(sentence) - len(tail)
+                else:
+                    p2 = 0 # shouldn't happen
+            else:
+                p2 += 1
+            words = sentence.split()
+            cur_ref_data_word = self.data_word[i]         
+            cur_pos = 0
+            pos1 = -1
+            pos2 = -1
+            for j, word in enumerate(words):
+                if j < Config.sen_len:
+                    word = word.lower()
+                    if word in word2id:
+                        cur_ref_data_word[j] = word2id[word]
+                    else:
+                        cur_ref_data_word[j] = 1
+                if cur_pos == p1:
+                    pos1 = j
+                    p1 = -1
+                if cur_pos == p2:
+                    pos2 = j
+                    p2 = -1
+                cur_pos += len(word) + 1
+            for j in range(j + 1, Config.sen_len):
+                cur_ref_data_word[j] = 0
+            if pos1 == -1 or pos2 == -1:
+                raise Exception("[ERROR] Position error, index = {}, sentence = {}, head = {}, tail = {}".format(i, sentence, head, tail))
+            if pos1 >= Config.sen_len:
+                pos1 = Config.sen_len - 1
+            if pos2 >= Config.sen_len:
+                pos2 = Config.sen_len - 1
+            for j in range(Config.sen_len):
+                self.data_pos1[i][j] = j - pos1 + Config.sen_len
+                self.data_pos2[i][j] = j - pos2 + Config.sen_len
+        
+  
+        np.save(os.path.join("../data/pre_processed_data", "train_"+mode+"_word.npy"), data_word)
+        np.save(os.path.join("../data/pre_processed_data", "train_"+mode+"_pos1.npy"), data_pos1)
+        np.save(os.path.join("../data/pre_processed_data", "train_"+mode+"_pos2.npy"), data_pos2)
+        np.save(os.path.join("../data/pre_processed_data", "train_"+mode+"_query.npy"), data_query)
+        
+    def to_tensor(self, array):
+        return torch.from_numpy(array)
+
+    def genBag(self):
+        print("process positive and negative instance....")
+        train = json.load(open("../data/nyt/train.json"))
+        positive_instance = []
+        negative_instance = []
+        for ins in train:
+            if ins['relation'] == "NA":
+                negative_instance.append(ins)
+            else:
+                positive_instance.append(ins)
+
+        positive_instance.sort(key=lambda a: a['head']['id'] + '#' + a['tail']['id'] + "#" + a["relation"])
+        negative_instance.sort(key=lambda a: a['head']['id'] + '#' + a['tail']['id'] + "#" + a["relation"])
+
+        relfact2scope = {}
+        curr_relfact = positive_instance[0]["head"]["id"]+"#"+positive_instance[0]["tail"]["id"]+"#"+positive_instance[0]["relation"]
+        relfact2scope[curr_relfact] = [0,]
+        for i, instance in enumerate(positive_instance):
+            relfact = instance["head"]["id"]+"#"+instance["tail"]["id"] + "#"+instance["relation"]
+            if relfact!=curr_relfact:
+                relfact2scope[curr_relfact].append(i)
+                curr_relfact = relfact
+                relfact2scope[curr_relfact] = [i,]
+        relfact2scope[curr_relfact].append(len(positive_instance))
+
+        neg_relfact2scope = {}
+        curr_relfact = negative_instance[0]["head"]["id"]+"#"+negative_instance[0]["tail"]["id"]+"#"+negative_instance[0]["relation"]
+        neg_relfact2scope[curr_relfact] = [0,]
+        for i, instance in enumerate(negative_instance):
+            relfact = instance["head"]["id"]+"#"+instance["tail"]["id"] + "#"+instance["relation"]
+            if relfact!=curr_relfact:
+                neg_relfact2scope[curr_relfact].append(i)
+                curr_relfact = relfact
+                neg_relfact2scope[curr_relfact] = [i,]
+        neg_relfact2scope[curr_relfact].append(len(negative_instance))
+
+
+        entity2scopelist = {}
+        for key in neg_relfact2scope.keys():
+            ins = negative_instance[neg_relfact2scope[key][0]]
+            if entity2scopelist.get(ins['head']['id'], -1) == -1:
+                entity2scopelist[ins['head']['id']] = [neg_relfact2scope[key],]
+            else:
+                entity2scopelist[ins['head']['id']].append(neg_relfact2scope[key])
+            if entity2scopelist.get(ins['tail']['id'], -1) == -1:
+                entity2scopelist[ins['tail']['id']] = [neg_relfact2scope[key], ]
+            else:
+                entity2scopelist[ins['tail']['id']].append(neg_relfact2scope[key])
+        
+        entity2rel = {}
+        for ins in positive_instance:
+            if ins['head']['id'] not in entity2rel:
+                entity2rel[ins['head']['id']] = [ins['relation'],]
+            else:
+                entity2rel[ins['head']['id']].append(ins['relation'])
+            if ins['tail']['id'] not in entity2rel:
+                entity2rel[ins['tail']['id']] = [ins['relation'],]
+            else:
+                entity2rel[ins['tail']['id']].append(ins['relation'])
+
+
+        '''len(relfact2scope) should equals to len(neg_pos_relfact2scope) '''
+        neg_bag_size = 20
+        neg_pos_relfact2scope = {}
+        neg_pos_relfact2rel = {}
+        negative_sample_instance = []
+        curr_pos = 0
+        relfact2scope_keys = []
+        for key in relfact2scope.keys():
+            relfact2scope_keys.append(key)
+        for i in range(len(relfact2scope_keys)):
+            head = positive_instance[relfact2scope[relfact2scope_keys[i]][0]]['head']['id']
+            tail = positive_instance[relfact2scope[relfact2scope_keys[i]][0]]['tail']['id']
+            head_neg_sample_scopelist = entity2scopelist.get(head, -1)
+            tail_neg_sample_scopelist = entity2scopelist.get(tail, -1)
+            for rel in entity2rel[head]:
+                neg_pos_relfact2rel[relfact2scope_keys[i]].append(rel)
+            for rel in entity2rel[tail]:
+                if rel not in neg_pos_relfact2rel[relfact2scope_keys[i]]:
+                    neg_pos_relfact2rel[relfact2scope_keys[i]].append(rel)
+            if head_neg_sample_scopelist == -1 and tail_neg_sample_scopelist == -1:
+                flag = i+1 if i+1 < len(relfact2scope_keys) else i-1
+                neg_samples = negative_instance[relfact2scope[relfact2scope_keys[flag]][0]:relfact2scope[relfact2scope_keys[flag]][1]]
+                negative_sample_instance.extend(neg_samples)
+                neg_pos_relfact2scope[relfact2scope_keys[i]] = [curr_pos, curr_pos+len(neg_samples)]
+                curr_pos += len(neg_samples)
+                neg_pos_relfact2rel[relfact2scope_keys[i]] = []
+                continue
+            ori_neg_sample_scopelist = []
+            if head_neg_sample_scopelist != -1:
+                ori_neg_sample_scopelist.extend(head_neg_sample_scopelist)
+            if tail_neg_sample_scopelist != -1:
+                ori_neg_sample_scopelist.extend(tail_neg_sample_scopelist)
+            neg_sample_scopelist = []
+            id0 = random.randint(0, len(ori_neg_sample_scopelist)-1)
+            step = int(len(ori_neg_sample_scopelist) / neg_bag_size)
+            for j in range(neg_bag_size):
+                neg_sample_scopelist.append(ori_neg_sample_scopelist[(id0+j*step)%len(ori_neg_sample_scopelist)])
+
+            for scope in neg_sample_scopelist:
+                randindex = random.randint(scope[0], scope[1]-1)
+                negative_sample_instance.append(negative_instance[randindex])
+            neg_pos_relfact2scope[relfact2scope_keys[i]] = [curr_pos, curr_pos+len(neg_sample_scopelist)]
+            curr_pos += len(neg_sample_scopelist)
+
+        na_instance = []
+        na_relfact2scope = {}
+
+        positive_entities = []
+        for ins in positive_instance:
+            if ins['head']['id'] not in positive_entities:
+                positive_entities.append(ins['head']['id'])
+            if ins['tail']['id'] not in positive_entities:
+                positive_entities.append(ins['tail']['id'])
+        num_ins = 0
+        for ins in negative_instance:
+            if ins['head']['id'] in positive_entities:
+                num_ins += 1
+                continue 
+            if ins['tail']['id'] in positive_entities:
+                num_ins += 1
+                continue
+            na_instance.append(ins)
+        print("the num of negative instances which contain entity in positive instance is: %d" % num_ins)
+
+        na_instance.sort(key=lambda a: a['head']['id'] + '#' + a['tail']['id'] + "#" + a["relation"])
+        curr_relfact = na_instance[0]["head"]["id"]+"#"+na_instance[0]["tail"]["id"]+"#"+na_instance[0]["relation"]
+        na_relfact2scope[curr_relfact] = [0,]
+        for i, instance in enumerate(na_instance):
+            relfact = instance["head"]["id"]+"#"+instance["tail"]["id"] + "#"+instance["relation"]
+            if relfact!=curr_relfact:
+                na_relfact2scope[curr_relfact].append(i)
+                curr_relfact = relfact
+                na_relfact2scope[curr_relfact] = [i,]
+        na_relfact2scope[curr_relfact].append(len(na_instance))
+
+        
+        positive_instance.extend(na_instance)
+        len_relfact = len(relfact2scope)
+        for key in na_relfact2scope.keys():
+            relfact2scope[key] = [na_relfact2scope[key][0]+len_relfact, na_relfact2scope[key][1]+len_relfact]
+        json.dump(positive_instance, open("../data/nyt/postive_train.json", 'w'))
+        json.dump(relfact2scope, open("../data/nyt/positive_relfact2scope.json", 'w'))
+        print("positive instance saved")
+        
+        for ins in na_instance:
+            ins['relation'] = "/location/location/contains"
+        negative_sample_instance.extend(na_instance)
+        len_neg_relfact = len(neg_pos_relfact2scope)
+        for key in na_relfact2scope.keys():
+            neg_pos_relfact2scope[key] = [na_relfact2scope[key][0]+len_neg_relfact, na_relfact2scope[key][1]+len_neg_relfact]
+        json.dump(negative_sample_instance, open("../data/nyt/negative_train.json", 'w'))
+        json.dump(neg_pos_relfact2scope, open("../data/nyt/negative_relfact2scope.json", 'w'))
+        json.dump(neg_pos_relfact2rel, open("../data/nyt/negative_relfact2rel.json", 'w'))
+        print("negative instance saved")
+        
+
+    
             
 
 

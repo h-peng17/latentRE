@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 from transformers import AdamW, WarmupLinearSchedule
 from model import LatentRE
 from config import Config
-from dataloader import Dataloader
+from dataloader import Dataloader, AdvDataloader
 from dataloader import Dataset
 from tmp_for_test import BagTest
 
@@ -95,15 +95,30 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         Config.training = True
         # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
         for j in range(int(train_ins_tot/Config.batch_size)):
-            batch_data = train_dataloader.next_batch()
+            batch_data = train_dataloader.train_next_batch()
+            # inputs = {
+            #     'input_ids':batch_data[0].cuda(),
+            #     'attention_mask':batch_data[1].cuda(),
+            #     'mask':batch_data[2].cuda(),
+            #     'query':batch_data[3].cuda(),
+            #     'knowledge':batch_data[4].cuda().float(),
+            # } 
             inputs = {
-                'input_ids':batch_data[0].cuda(),
-                'attention_mask':batch_data[1].cuda(),
-                'mask':batch_data[2].cuda(),
-                'query':batch_data[3].cuda(),
-                'knowledge':batch_data[4].cuda().float(),
-            }        
-            loss, output = parallel_model(**inputs)
+                'pos_word':batch_data['pos_word'].cuda(),
+                'pos_pos1':batch_data['pos_pos1'].cuda(),
+                'pos_pos2':batch_data['pos_pos2'].cuda(),
+                'pos_label':batch_data['pos_label'].cuda(),
+                'pos_query':batch_data['pos_query'].cuda(),
+                'pos_scope':batch_data['pos_scope'],
+                'neg_word':batch_data['neg_word'].cuda(),
+                'neg_pos1':batch_data['neg_pos1'].cuda(),
+                'neg_pos2':batch_data['neg_pos2'].cuda(),
+                'neg_label':batch_data['neg_label'].cuda(),
+                'mul_label':batch_data['mul_label'].cuda(),
+                'neg_scope':batch_data['neg_scope'],
+            }
+
+            loss = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
@@ -113,15 +128,15 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             parallel_model.zero_grad()
             global_step += 1
 
-            output = output.cpu().detach().numpy()
-            label = batch_data[3].numpy()
-            tot += label.shape[0]
-            acc += (output == label).sum()
-            sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, (acc/tot), loss))
-            sys.stdout.flush()
-
-            # sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
+            # output = output.cpu().detach().numpy()
+            # label = batch_data[3].numpy()
+            # tot += label.shape[0]
+            # acc += (output == label).sum()
+            # sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, (acc/tot), loss))
             # sys.stdout.flush()
+
+            sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
+            sys.stdout.flush()
 
             # final_input_words.append(batch_data[0].tolist())
             # final_mask_words.append(batch_data[2].tolist())
@@ -151,10 +166,15 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 Config.training = False
                 dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
                 for j in range(dev_iterator):
-                    batch_data = dev_dataloader.next_batch()
+                    batch_data = dev_dataloader.test_next_batch()
+                    # inputs = {
+                    #     'input_ids':batch_data[0].cuda(),
+                    #     'attention_mask':batch_data[1].cuda()
+                    # }
                     inputs = {
-                        'input_ids':batch_data[0].cuda(),
-                        'attention_mask':batch_data[1].cuda()
+                        'pos_word':batch_data['word'].cuda(),
+                        'pos_pos1':batch_data['pos1'].cuda(),
+                        'pos_pos2':batch_data['pos2'].cuda(),
                     }
                     logit = parallel_model(**inputs)
                     bagTest.update(logit.cpu().detach())
@@ -165,7 +185,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 print("---------------------------------------------------------------------------------------------------")
                 #clean gpu memory cache
                 torch.cuda.empty_cache()
-        
         
     # after iterator, save the best perfomance
     log(bagTest.auc, bagTest.epoch)
@@ -278,9 +297,9 @@ if __name__ == "__main__":
     
     if args.mode == "train":
         # train
-        train_dataloader = Dataloader("train", "relfact" if Config.train_bag else "ins", Config.dataset)
-        dev_dataloader = Dataloader("test", "entpair" if Config.eval_bag else "ins", Config.dataset)
-        model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
+        train_dataloader = AdvDataloader('train')
+        dev_dataloader = AdvDataloader('test')
+        model = LatentRE(train_dataloader.word_vec, None)
         model.cuda()
         train(args,
               model, 
