@@ -92,7 +92,7 @@ class LatentRE(nn.Module):
             return neg_score - pos_score - neg_pos_score + 2.0
         else:
             text = self.encoder(pos_word, pos_pos1, pos_pos2)
-            logit, _ = self.selector(text, None, None)
+            logit = self.selector(text, None, None)
             return logit
 
            
