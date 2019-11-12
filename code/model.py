@@ -54,6 +54,7 @@ class LatentRE(nn.Module):
                   neg_pos2=None,
                   neg_label=None,
                   neg_scope=None,
+                  one_neg_label=None,
                   mul_label=None,  
                   mul_num=None, 
                   label=None,
@@ -90,13 +91,14 @@ class LatentRE(nn.Module):
             Config.train_bag = False
             neg_text = self.encoder(neg_word, neg_pos1, neg_pos2)
             neg_logit, _ = self.selector(neg_text, None, None)
-            neg_logit = F.softmax(neg_logit, 1)
-            neg_score = torch.mean(torch.sum(neg_logit * mul_label.float(), 1)/mul_num.float()) # should be 0
-            neg_pos_score = torch.mean(torch.sum(neg_logit * neg_label.float(), 1)) # should be 1
+            # neg_logit = F.softmax(neg_logit, 1)
+            # neg_score = torch.mean(torch.sum(neg_logit * mul_label.float(), 1)/mul_num.float()) # should be 0
+            # neg_pos_score = torch.mean(torch.sum(neg_logit * neg_label.float(), 1)) # should be 1
+            neg_loss = self.loss.ce_loss(neg_logit, one_neg_label)
 
 
             # return - pos_score + 1.0
-            return pos_loss
+            return pos_loss + neg_loss
         else:
             text = self.encoder(pos_word, pos_pos1, pos_pos2)
             logit = self.selector(text, None, None)

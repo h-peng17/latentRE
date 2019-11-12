@@ -759,6 +759,7 @@ class AdvDataloader:
         batch_data['mul_num'] = self.to_tensor(np.concatenate(_multi_label).sum(1)) 
         batch_data['neg_label'] = self.to_tensor(np.concatenate(_label))
         batch_data['neg_scope'] = np.stack(_scope)
+        batch_data['one_neg_label'] = self.to_tensor(np.zeros((batch_data['neg_word'].size()[0],), dtype=int))
 
         return batch_data
     

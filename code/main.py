@@ -114,6 +114,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'neg_pos1':batch_data['neg_pos1'].cuda(),
                 'neg_pos2':batch_data['neg_pos2'].cuda(),
                 'neg_label':batch_data['neg_label'].cuda(),
+                'one_neg_label':batch_data['one_neg_label'].cuda(),
                 'mul_label':batch_data['mul_label'].cuda(),
                 'mul_num':batch_data['mul_num'].cuda(),
                 'neg_scope':batch_data['neg_scope'],
