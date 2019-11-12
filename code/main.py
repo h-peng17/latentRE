@@ -95,7 +95,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         Config.training = True
         # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
         for j in range(int(train_ins_tot/Config.batch_size)):
-            batch_data = train_dataloader.train_next_batch()
+            batch_data = train_dataloader.next_batch()
             # inputs = {
             #     'input_ids':batch_data[0].cuda(),
             #     'attention_mask':batch_data[1].cuda(),
@@ -175,7 +175,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 Config.training = False
                 dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
                 for j in range(dev_iterator):
-                    batch_data = dev_dataloader.test_next_batch()
+                    batch_data = dev_dataloader.next_batch()
                     # inputs = {
                     #     'input_ids':batch_data[0].cuda(),
                     #     'attention_mask':batch_data[1].cuda()
