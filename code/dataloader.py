@@ -483,14 +483,14 @@ class AdvDataloader:
         if mode == 'train':
             if not os.path.exists("../data/nyt/postive_train.json"):
                 self.genBag()
-            if not os.path.exists("../pre_processed_data/train_positive_word"):
+            if not os.path.exists("../data/pre_processed_data/train_positive_word.npy"):
                 print("begin pre processing train data")
                 positive_train = json.load(open("../data/nyt/postive_train.json"))
                 negative_train = json.load(open("../data/nyt/negative_train.json"))
                 negative_relfact2rel = json.load(open("../data/nyt/negative_relfact2rel.json"))
                 negative_relfact2scope = json.load(open("../data/nyt/negative_relfact2scope.json"))
                 
-                ori_word_vec = json.load(open(os.path.join("../data/"+dataset,"word_vec.json")))
+                ori_word_vec = json.load(open(os.path.join("../data/nyt","word_vec.json")))
                 Config.word_tot = len(ori_word_vec) + 2
                 
                 # process word vec
@@ -502,7 +502,7 @@ class AdvDataloader:
                     word2id[w] = len(word2id)
                 
                 # process rel2id
-                rel2id = json.load(open(os.path.join("../data/"+dataset,"rel2id.json")))
+                rel2id = json.load(open(os.path.join("../data/nyt","rel2id.json")))
                 Config.rel_num = len(rel2id)
 
                 # process word_vec
@@ -518,8 +518,9 @@ class AdvDataloader:
                 self.convert(positive_train, word2id, rel2id, 'positive')
                 self.convert(negative_train, word2id, rel2id, 'negative')
 
-                data_multi_query = np.zeros((len(negative_train), Config.rel_num), type=int)
+                data_multi_query = np.zeros((len(negative_train), Config.rel_num), dtype=int)
                 for key in negative_relfact2scope.keys():
+                    # pdb.set_trace()
                     scope = negative_relfact2scope[key]
                     ori_rels = negative_relfact2rel[key]
                     rels = []
@@ -532,8 +533,8 @@ class AdvDataloader:
                         data_multi_query[i][rels] = 1
                 np.save(os.path.join("../data/pre_processed_data", "train_multi_query.npy"), data_multi_query)
 
-                pos_one_query = np.zeros((len(positive_train),), type=int)
-                for ins in positive_train:
+                pos_one_query = np.zeros((len(positive_train),), dtype=int)
+                for i, ins in enumerate(positive_train):
                     try:
                         pos_one_query[i] = rel2id[ins['relation']]
                     except:
@@ -552,8 +553,8 @@ class AdvDataloader:
             self.train_negative_query = np.load(os.path.join("../data/pre_processed_data", "train_negative_query.npy"))
             self.train_one_query = np.load(os.path.join("../data/pre_processed_data", "train_one_query.npy"))
             self.train_multi_query = np.load(os.path.join("../data/pre_processed_data", "train_multi_query.npy"))
-            self.positive_relfact2scope = json.load(os.path.join("../data/nyt/positive_relfact2scope.json"))
-            self.negative_relfact2scope = json.load(os.path.join("../data/nyt/negative_relfact2scope.json"))
+            self.positive_relfact2scope = json.load(open(os.path.join("../data/nyt/positive_relfact2scope.json")))
+            self.negative_relfact2scope = json.load(open(os.path.join("../data/nyt/negative_relfact2scope.json")))
             self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
             Config.rel_num = len(json.load(open(os.path.join("../data/nyt", "rel2id.json"))))
             Config.word_tot = len(self.word_vec) + 2
@@ -572,10 +573,10 @@ class AdvDataloader:
             self.idx = 0
         
         elif mode == "test":
-            if not os.path.exists("../pre_processed_data/test_word"):
+            if not os.path.exists("../data/pre_processed_data/test_word.npy"):
                 print("pre processing test data")
                 data = json.load(open('../data/nyt/test.json'))
-                ori_word_vec = json.load(open(os.path.join("../data/"+dataset,"word_vec.json")))
+                ori_word_vec = json.load(open(os.path.join("../data/nyt","word_vec.json")))
                 Config.word_tot = len(ori_word_vec) + 2
                 
                 # process word vec
@@ -587,7 +588,7 @@ class AdvDataloader:
                     word2id[w] = len(word2id)
                 
                 # process rel2id
-                rel2id = json.load(open(os.path.join("../data/"+dataset,"rel2id.json")))
+                rel2id = json.load(open(os.path.join("../data/nyt","rel2id.json")))
                 Config.rel_num = len(rel2id)
 
                 # process word_vec
@@ -612,15 +613,21 @@ class AdvDataloader:
                         entities_pos_dict[curr_entities] = [i,]
                 entities_pos_dict[curr_entities].append(len(data))
 
+                instance_tot = len(data)
+                data_word = np.zeros((instance_tot, Config.sen_len), dtype=int)
+                data_pos1 = np.zeros((instance_tot, Config.sen_len), dtype=int)
+                data_pos2 = np.zeros((instance_tot, Config.sen_len), dtype=int)
+                data_query = np.zeros((instance_tot, Config.rel_num), dtype=int)
+
                 for i in range(len(data)):
                     instance = data[i]
                     head = instance["head"]["word"].lower()
                     tail = instance["tail"]["word"].lower()
                     sentence = instance["sentence"].lower()
                     try:
-                        self.data_query[i] = rel2id[instance["relation"]]
+                        data_query[i] = rel2id[instance["relation"]]
                     except:
-                        self.data_query[i] = 0
+                        data_query[i] = 0
                         print("relation error 1")
 
                     p1 = sentence.find(' ' + head + ' ')
@@ -644,7 +651,7 @@ class AdvDataloader:
                     else:
                         p2 += 1
                     words = sentence.split()
-                    cur_ref_data_word = self.data_word[i]         
+                    cur_ref_data_word = data_word[i]         
                     cur_pos = 0
                     pos1 = -1
                     pos2 = -1
@@ -671,8 +678,8 @@ class AdvDataloader:
                     if pos2 >= Config.sen_len:
                         pos2 = Config.sen_len - 1
                     for j in range(Config.sen_len):
-                        self.data_pos1[i][j] = j - pos1 + Config.sen_len
-                        self.data_pos2[i][j] = j - pos2 + Config.sen_len
+                        data_pos1[i][j] = j - pos1 + Config.sen_len
+                        data_pos2[i][j] = j - pos2 + Config.sen_len
                 
                 np.save(os.path.join("../data/pre_processed_data", "test_word.npy"), data_word)
                 np.save(os.path.join("../data/pre_processed_data", "test_pos1.npy"), data_pos1)
@@ -681,6 +688,7 @@ class AdvDataloader:
                 json.dump(entities_pos_dict, open(os.path.join("../data/pre_processed_data", "test_entpair2scope.json"),'w'))
 
             print("loading test data")
+            self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
             self.data_word = np.load(os.path.join("../data/pre_processed_data", "test_word.npy"))
             self.data_pos1 = np.load(os.path.join("../data/pre_processed_data", "test_pos1.npy"))
             self.data_pos2 = np.load(os.path.join("../data/pre_processed_data", "test_pos2.npy"))
@@ -761,12 +769,12 @@ class AdvDataloader:
         if idx1 > len(self.order):
             idx1 = len(self.order)
         self.idx = idx1
-            index = self.order[idx0:idx1]
-            batch_data = {}
-            batch_data["word"] = self.to_tensor(self.data_word[index])
-            batch_data["pos1"] = self.to_tensor(self.data_pos1[index])
-            batch_data["pos2"] = self.to_tensor(self.data_pos2[index])
-            return batch_data
+        index = self.order[idx0:idx1]
+        batch_data = {}
+        batch_data["word"] = self.to_tensor(self.data_word[index])
+        batch_data["pos1"] = self.to_tensor(self.data_pos1[index])
+        batch_data["pos2"] = self.to_tensor(self.data_pos2[index])
+        return batch_data
     
     def convert(self, data, word2id, rel2id, mode):
         print("begin converting....")
@@ -783,9 +791,9 @@ class AdvDataloader:
             tail = instance["tail"]["word"].lower()
             sentence = instance["sentence"].lower()
             try:
-                self.data_query[i][rel2id[instance["relation"]]] = 1
+                data_query[i][rel2id[instance["relation"]]] = 1
             except:
-                self.data_query[i][0] = 1
+                data_query[i][0] = 1
                 print("relation error 1")
 
             p1 = sentence.find(' ' + head + ' ')
@@ -809,7 +817,7 @@ class AdvDataloader:
             else:
                 p2 += 1
             words = sentence.split()
-            cur_ref_data_word = self.data_word[i]         
+            cur_ref_data_word = data_word[i]         
             cur_pos = 0
             pos1 = -1
             pos2 = -1
@@ -836,8 +844,8 @@ class AdvDataloader:
             if pos2 >= Config.sen_len:
                 pos2 = Config.sen_len - 1
             for j in range(Config.sen_len):
-                self.data_pos1[i][j] = j - pos1 + Config.sen_len
-                self.data_pos2[i][j] = j - pos2 + Config.sen_len
+                data_pos1[i][j] = j - pos1 + Config.sen_len
+                data_pos2[i][j] = j - pos2 + Config.sen_len
         
   
         np.save(os.path.join("../data/pre_processed_data", "train_"+mode+"_word.npy"), data_word)
@@ -923,6 +931,7 @@ class AdvDataloader:
             tail = positive_instance[relfact2scope[relfact2scope_keys[i]][0]]['tail']['id']
             head_neg_sample_scopelist = entity2scopelist.get(head, -1)
             tail_neg_sample_scopelist = entity2scopelist.get(tail, -1)
+            neg_pos_relfact2rel[relfact2scope_keys[i]] = []
             for rel in entity2rel[head]:
                 neg_pos_relfact2rel[relfact2scope_keys[i]].append(rel)
             for rel in entity2rel[tail]:
@@ -934,7 +943,6 @@ class AdvDataloader:
                 negative_sample_instance.extend(neg_samples)
                 neg_pos_relfact2scope[relfact2scope_keys[i]] = [curr_pos, curr_pos+len(neg_samples)]
                 curr_pos += len(neg_samples)
-                neg_pos_relfact2rel[relfact2scope_keys[i]] = []
                 continue
             ori_neg_sample_scopelist = []
             if head_neg_sample_scopelist != -1:
@@ -999,6 +1007,7 @@ class AdvDataloader:
         len_neg_relfact = len(neg_pos_relfact2scope)
         for key in na_relfact2scope.keys():
             neg_pos_relfact2scope[key] = [na_relfact2scope[key][0]+len_neg_relfact, na_relfact2scope[key][1]+len_neg_relfact]
+            neg_pos_relfact2rel[key] = ["/location/location/contains"]
         json.dump(negative_sample_instance, open("../data/nyt/negative_train.json", 'w'))
         json.dump(neg_pos_relfact2scope, open("../data/nyt/negative_relfact2scope.json", 'w'))
         json.dump(neg_pos_relfact2rel, open("../data/nyt/negative_relfact2rel.json", 'w'))
