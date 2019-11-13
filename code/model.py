@@ -81,40 +81,40 @@ class LatentRE(nn.Module):
         #     text = self.encoder(input_ids, attention_mask)
         #     logit = self.selector(text, scope)
         #     return logit
-        # if Config.training:
-        #     '''logit shape `(batch_size, rel_num)` 
-        #        pos_label shape `(batch_size, rel_num)`'''
-        #     Config.train_bag = True
-        #     pos_text = self.encoder(pos_word, pos_pos1, pos_pos2)
-        #     pos_logit = self.selector(pos_text, pos_scope, pos_query)
-        #     # pos_logit = F.softmax(pos_logit, 1)
-        #     # pos_score = torch.mean(torch.sum(pos_logit * pos_label.float(), 1)) #should be 1
-        #     pos_loss = self.loss.ce_loss(pos_logit, pos_query)
-
-        #     Config.train_bag = False
-        #     neg_text = self.encoder(neg_word, neg_pos1, neg_pos2)
-        #     neg_logit, _ = self.selector(neg_text, None, None)
-        #     # neg_logit = F.softmax(neg_logit, 1)
-        #     # neg_score = torch.mean(torch.sum(neg_logit * mul_label.float(), 1)/mul_num.float()) # should be 0
-        #     # neg_pos_score = torch.mean(torch.sum(neg_logit * neg_label.float(), 1)) # should be 1
-        #     neg_loss = self.loss.ce_loss_neg(neg_logit, one_neg_label) / len(pos_scope)
-
-
-        #     # return - pos_score + 1.0
-        #     return pos_loss + neg_loss
-        # else:
-        #     text = self.encoder(pos_word, pos_pos1, pos_pos2)
-        #     logit = self.selector(text, None, None)
-        #     return logit
         if Config.training:
-            text = self.encoder(word, pos1, pos2)
-            logit = self.selector(text, scope, label)
-            loss = self.loss.ce_loss(logit, label)
-            return loss 
+            '''logit shape `(batch_size, rel_num)` 
+               pos_label shape `(batch_size, rel_num)`'''
+            Config.train_bag = True
+            pos_text = self.encoder(pos_word, pos_pos1, pos_pos2)
+            pos_logit = self.selector(pos_text, pos_scope, pos_query)
+            # pos_logit = F.softmax(pos_logit, 1)
+            # pos_score = torch.mean(torch.sum(pos_logit * pos_label.float(), 1)) #should be 1
+            pos_loss = self.loss.ce_loss(pos_logit, pos_query)
+
+            Config.train_bag = False
+            neg_text = self.encoder(neg_word, neg_pos1, neg_pos2)
+            neg_logit, _ = self.selector(neg_text, None, None)
+            # neg_logit = F.softmax(neg_logit, 1)
+            # neg_score = torch.mean(torch.sum(neg_logit * mul_label.float(), 1)/mul_num.float()) # should be 0
+            # neg_pos_score = torch.mean(torch.sum(neg_logit * neg_label.float(), 1)) # should be 1
+            neg_loss = self.loss.ce_loss_neg(neg_logit, one_neg_label) / len(pos_scope)
+
+
+            # return - pos_score + 1.0
+            return pos_loss + neg_loss
         else:
-            text = self.encoder(word, pos1, pos2)
-            logit = self.selector(text, scope)
+            text = self.encoder(pos_word, pos_pos1, pos_pos2)
+            logit = self.selector(text, None, None)
             return logit
+        # if Config.training:
+        #     text = self.encoder(word, pos1, pos2)
+        #     logit = self.selector(text, scope, label)
+        #     loss = self.loss.ce_loss(logit, label)
+        #     return loss 
+        # else:
+        #     text = self.encoder(word, pos1, pos2)
+        #     logit = self.selector(text, scope)
+        #     return logit
 
 
            
