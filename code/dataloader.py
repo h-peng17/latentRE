@@ -376,7 +376,7 @@ class Dataloader:
             # Config.word_tot = len(self.word_vec) + 2
             # Config.word_embeeding_dim = len(self.word_vec[0])
             print("Finish loading...")
-            self.instance_tot = self.data_query.shape[0]
+            self.instance_tot = self.data_input_ids.shape[0]
         self.entpair_tot = len(self.entpair2scope)
         self.relfact_tot = len(self.relfact2scope)
 
@@ -418,8 +418,8 @@ class Dataloader:
 
     def next_batch(self):
         if self.idx >= len(self.order):
-            # if Config.training:
-                # random.shuffle(self.order)
+            if Config.training:
+                random.shuffle(self.order)
             self.idx = 0
         idx0 = self.idx
         idx1 = self.idx + Config.batch_size
