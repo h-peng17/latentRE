@@ -96,29 +96,29 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
         for j in range(int(train_ins_tot/Config.batch_size)):
             batch_data = train_dataloader.next_batch()
-            # inputs = {
-            #     'input_ids':batch_data[0].cuda(),
-            #     'attention_mask':batch_data[1].cuda(),
-            #     'mask':batch_data[2].cuda(),
-            #     'query':batch_data[3].cuda(),
-            #     'knowledge':batch_data[4].cuda().float(),
-            # } 
             inputs = {
-                'pos_word':batch_data['pos_word'].cuda(),
-                'pos_pos1':batch_data['pos_pos1'].cuda(),
-                'pos_pos2':batch_data['pos_pos2'].cuda(),
-                'pos_label':batch_data['pos_label'].cuda(),
-                'pos_query':batch_data['pos_query'].cuda(),
-                'pos_scope':batch_data['pos_scope'],
-                'neg_word':batch_data['neg_word'].cuda(),
-                'neg_pos1':batch_data['neg_pos1'].cuda(),
-                'neg_pos2':batch_data['neg_pos2'].cuda(),
-                'neg_label':batch_data['neg_label'].cuda(),
-                'one_neg_label':batch_data['one_neg_label'].cuda(),
-                'mul_label':batch_data['mul_label'].cuda(),
-                'mul_num':batch_data['mul_num'].cuda(),
-                'neg_scope':batch_data['neg_scope'],
-            }
+                'input_ids':batch_data[0].cuda(),
+                'attention_mask':batch_data[1].cuda(),
+                'mask':batch_data[2].cuda(),
+                'query':batch_data[3].cuda(),
+                'knowledge':batch_data[4].cuda().float(),
+            } 
+            # inputs = {
+            #     'pos_word':batch_data['pos_word'].cuda(),
+            #     'pos_pos1':batch_data['pos_pos1'].cuda(),
+            #     'pos_pos2':batch_data['pos_pos2'].cuda(),
+            #     'pos_label':batch_data['pos_label'].cuda(),
+            #     'pos_query':batch_data['pos_query'].cuda(),
+            #     'pos_scope':batch_data['pos_scope'],
+            #     'neg_word':batch_data['neg_word'].cuda(),
+            #     'neg_pos1':batch_data['neg_pos1'].cuda(),
+            #     'neg_pos2':batch_data['neg_pos2'].cuda(),
+            #     'neg_label':batch_data['neg_label'].cuda(),
+            #     'one_neg_label':batch_data['one_neg_label'].cuda(),
+            #     'mul_label':batch_data['mul_label'].cuda(),
+            #     'mul_num':batch_data['mul_num'].cuda(),
+            #     'neg_scope':batch_data['neg_scope'],
+            # }
             # inputs = {
             #     'word':batch_data['word'].cuda(),
             #     'pos1':batch_data['pos1'].cuda(),
@@ -176,15 +176,15 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
                 for j in range(dev_iterator):
                     batch_data = dev_dataloader.next_batch()
-                    # inputs = {
-                    #     'input_ids':batch_data[0].cuda(),
-                    #     'attention_mask':batch_data[1].cuda()
-                    # }
                     inputs = {
-                        'word':batch_data['word'].cuda(),
-                        'pos1':batch_data['pos1'].cuda(),
-                        'pos2':batch_data['pos2'].cuda(),
+                        'input_ids':batch_data[0].cuda(),
+                        'attention_mask':batch_data[1].cuda()
                     }
+                    # inputs = {
+                    #     'word':batch_data['word'].cuda(),
+                    #     'pos1':batch_data['pos1'].cuda(),
+                    #     'pos2':batch_data['pos2'].cuda(),
+                    # }
                     logit = parallel_model(**inputs)
                     bagTest.update(logit.cpu().detach())
                     sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
