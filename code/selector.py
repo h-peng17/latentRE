@@ -78,7 +78,7 @@ class Selector(nn.Module):
                 # neg_list = (torch.randint(1, 53, (pos_list.size()[0],), device=torch.cuda) + pos_list) % 53
                 # neg_latent = self.rel_mat.transpose(0,1)[neg_list]
 
-                latent = torch.matmul(gumbal_logit, self.decoder_rel_mat.transpose(0, 1))
+                latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
 
                 return logit, latent
         else:
