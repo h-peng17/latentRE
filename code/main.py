@@ -102,7 +102,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'mask':batch_data[2].cuda(),
                 'query':batch_data[3].cuda(),
                 'knowledge':batch_data[4].cuda().float(),
-                'bce_label':batch_data[5].cuda(),
+                'bce_label':batch_data[5].cuda().float(),
             } 
             # inputs = {
             #     'pos_word':batch_data['pos_word'].cuda(),
