@@ -80,7 +80,7 @@ class Selector(nn.Module):
 
                 latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
 
-                bce_logit = F.sigmoid(torch.matmul(x, self.decoder_rel_mat).squeeze())
+                bce_logit = torch.matmul(x, self.decoder_rel_mat).squeeze()
 
                 return logit, latent, bce_logit
         else:

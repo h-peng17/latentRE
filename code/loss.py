@@ -14,7 +14,7 @@ class Loss(nn.Module):
         # weight=torch.from_numpy(weight).to(torch.float32)
         self.crossEntropy = nn.CrossEntropyLoss(weight=torch.from_numpy(weight).to(torch.float32))
         self.neg_crossEntropy = nn.CrossEntropyLoss(reduction='sum')
-        self.bceloss = nn.BCELoss()
+        self.bceloss = nn.BCEWithLogitsLoss()
         self.softmax = nn.Softmax(dim=1)
 
     
