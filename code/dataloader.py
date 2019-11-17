@@ -128,6 +128,7 @@ class Dataloader:
             self.data_token_mask = np.ones((self.instance_tot, Config.sen_len), dtype=int)
             self.data_between_entity_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_labels = np.zeros((self.instance_tot, Config.sen_len), dtype=int) - 1 # -1
+            self.data_bce_label = np.zeros((self.instance_tot, ) dtype=int)
 
             def _process_loop(i):
                 instance = data[i]
@@ -136,6 +137,8 @@ class Dataloader:
                 sentence = instance["sentence"].lower()
                 try:
                     self.data_query[i] = rel2id[instance["relation"]]
+                    if self.data_query[i] != 0:
+                        self.data_bce_label[i] = 1
                 except:
                     self.data_query[i] = 0
                     print("relation error 1")
@@ -349,6 +352,7 @@ class Dataloader:
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"), self.data_token_mask)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_between_entity_mask.npy"), self.data_between_entity_mask) 
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_labels.npy"), self.data_labels) 
+            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_bce_label.npy"), self.data_bce_label)
             json.dump(self.entpair2scope, open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json"), 'w'))
             json.dump(self.relfact2scope, open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_relfact2scope.json"), "w"))
             print("end pre-process")
@@ -370,6 +374,7 @@ class Dataloader:
             self.data_decoder_input_ids = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_input_ids.npy"))
             self.data_decoder_attention_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_attention_mask.npy"))
             self.data_labels = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_labels.npy"))
+            self.data_bce_label = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_bce_label.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json")))
             self.relfact2scope = json.load(open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_relfact2scope.json")))
             Config.rel_num = len(json.load(open(os.path.join("../data/"+dataset, "rel2id.json"))))
@@ -434,7 +439,8 @@ class Dataloader:
                         self.to_tensor(self.data_attention_mask[index][:, :max_length]), \
                          self.to_tensor(self.data_mask[index][:, :max_length]), \
                           self.to_tensor(self.data_query[index]), \
-                           self.to_tensor(self.data_knowledge[index])
+                           self.to_tensor(self.data_knowledge[index]), \
+                            self.to_tensor(self.data_bce_label[index])
                             # self.to_tensor(self.data_decoder_input_ids[index][:, :max_length]), \
                             #  self.to_tensor(self.data_decoder_attention_mask[index][:, :max_length])
             else:
