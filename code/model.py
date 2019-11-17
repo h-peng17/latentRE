@@ -86,6 +86,12 @@ class LatentRE(nn.Module):
             text = self.encoder(input_ids, attention_mask)
             _, _, bce_logit = self.selector(text, None, None)
             bce_loss = self.loss.bce_loss(bce_logit, bce_label)
+            return bce_loss
+        else:
+            text = self.encoder(input_ids, attention_mask)
+            _, bce_logit = self.selector(text, None, None)
+            return bce_logit
+
         # if Config.training:
         #     '''logit shape `(batch_size, rel_num)` 
         #        pos_label shape `(batch_size, rel_num)`'''

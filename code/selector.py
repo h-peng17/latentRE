@@ -80,7 +80,7 @@ class Selector(nn.Module):
 
                 latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
 
-                bce_logit = F.sigmoid(torch.matmul(logit, self.decoder_rel_mat).squeeze())
+                bce_logit = F.sigmoid(torch.matmul(x, self.decoder_rel_mat).squeeze())
 
                 return logit, latent, bce_logit
         else:
@@ -94,5 +94,5 @@ class Selector(nn.Module):
                 bag_logit = torch.stack(bag_logit)
                 return bag_logit
             else:
-                return self.softmax(self.__logit__(x))
+                return self.softmax(self.__logit__(x)), F.sigmoid(torch.matmul(x, self.decoder_rel_mat).squeeze())
                 

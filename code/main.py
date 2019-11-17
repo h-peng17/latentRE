@@ -174,6 +174,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 print("begin deving...")
                 parallel_model.eval()
                 Config.training = False
+                tot = 0
+                corr = 0
                 dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
                 for j in range(dev_iterator):
                     batch_data = dev_dataloader.next_batch()
@@ -181,17 +183,22 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                         'input_ids':batch_data[0].cuda(),
                         'attention_mask':batch_data[1].cuda()
                     }
+                    label = batch_data[2]
                     # inputs = {
                     #     'word':batch_data['word'].cuda(),
                     #     'pos1':batch_data['pos1'].cuda(),
                     #     'pos2':batch_data['pos2'].cuda(),
                     # }
                     logit = parallel_model(**inputs)
-                    bagTest.update(logit.cpu().detach())
-                    sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
+                    logit = logit.cpu().detach().numpy()
+                    tot += logit.shape[0]
+                    corr += np.logical_and(logit<0.5, label==0)
+                    corr += np.logical_and(logit>0.5, label==1)
+                    # bagTest.update(logit.cpu().detach())
+                    sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f acc: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size)), (corr/tot)))
                     sys.stdout.flush()
                 print("")
-                bagTest.forward(i)  
+                # bagTest.forward(i)  
                 print("---------------------------------------------------------------------------------------------------")
                 #clean gpu memory cache
                 torch.cuda.empty_cache()
