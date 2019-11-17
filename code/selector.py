@@ -94,5 +94,5 @@ class Selector(nn.Module):
                 bag_logit = torch.stack(bag_logit)
                 return bag_logit
             else:
-                return self.softmax(self.__logit__(x)), F.sigmoid(torch.matmul(x, self.decoder_rel_mat).squeeze())
+                return self.softmax(self.__logit__(x)), torch.sigmoid(torch.matmul(x, self.decoder_rel_mat).squeeze())
                 
