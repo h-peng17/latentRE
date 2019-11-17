@@ -41,7 +41,7 @@ class Selector(nn.Module):
         self.bias = nn.Parameter(torch.randn(Config.rel_num))
         self.softmax = nn.Softmax(1)
         self.gumbal_softmax = GumbalSoftmax()
-        self.decoder_rel_mat = nn.Parameter(torch.zeros(Config.hidden_size, Config.rel_num))
+        self.decoder_rel_mat = nn.Parameter(torch.randn(Config.hidden_size, 1))
 
 
         """for mask na relation embedding"""
@@ -80,7 +80,9 @@ class Selector(nn.Module):
 
                 latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
 
-                return logit, latent
+                bce_logit = F.sigmoid(torch.matmul(logit, self.decoder_rel_mat).squeeze())
+
+                return logit, latent, bce_logit
         else:
             if Config.eval_bag:
                 bag_logit = []

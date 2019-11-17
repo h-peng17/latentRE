@@ -128,7 +128,7 @@ class Dataloader:
             self.data_token_mask = np.ones((self.instance_tot, Config.sen_len), dtype=int)
             self.data_between_entity_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_labels = np.zeros((self.instance_tot, Config.sen_len), dtype=int) - 1 # -1
-            self.data_bce_label = np.zeros((self.instance_tot, ) dtype=int)
+            self.data_bce_label = np.zeros((self.instance_tot, ), dtype=int)
 
             def _process_loop(i):
                 instance = data[i]
