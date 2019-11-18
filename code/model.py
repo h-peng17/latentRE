@@ -21,14 +21,15 @@ class LatentRE(nn.Module):
     def __init__(self, word_vec, weight=None):
         super(LatentRE, self).__init__()
         ''' load encoder '''
-        # checkpoint = torch.load(os.path.join(Config.save_path, "ckptencoder1"))
+        checkpoint = torch.load(os.path.join(Config.save_path, "ckptbert1"))
         self.encoder = Bert()
-        # self.encoder.load_state_dict(checkpoint["encoder"])
-        # for param in self.encoder.parameters():
-            # param.requires_grad = False # frozen
+        self.encoder.load_state_dict(checkpoint["encoder"])
+        for param in self.encoder.parameters():
+            param.requires_grad = False # frozen
         self.selector = Selector()
         # for param in self.selector.parameters():
         #     param.requires_grad = False # frozen
+        self.main_encoder = Bert()
 
         # decoder_ckpt = torch.load(os.path.join(Config.save_path, "ckptlatent39"))
         # self.selector.load_state_dict(decoder_ckpt['selector'])
@@ -68,29 +69,32 @@ class LatentRE(nn.Module):
                   knowledge=None,
                   bce_label=None, 
                   scope=None):
-        # if Config.training:
-        #     text = self.encoder(input_ids, attention_mask)
-        #     logit, latent = self.selector(text, scope, query)
-        #     ce_loss = self.loss.ce_loss(logit, query)
-        #     kl_loss = self.loss.kl_loss(logit, knowledge)
-        #     if Config.latent:
-        #         gen_loss = self.decoder(input_ids, attention_mask, mask, latent)
-        #         return kl_loss * Config.kl_loss_scale + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale
-        #     else:
-        #         return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
-        # else:
-        #     text = self.encoder(input_ids, attention_mask)
-        #     logit = self.selector(text, scope)
-        #     return logit
         if Config.training:
+            main_text = self.main_encoder(input_ids, attention_mask)
+            logit, latent, _ = self.selector(main_text, scope, query)
             text = self.encoder(input_ids, attention_mask)
             _, _, bce_logit = self.selector(text, None, None)
-            bce_loss = self.loss.bce_loss(bce_logit, bce_label)
-            return bce_loss
+            margin = torch.ones(bce_logit.shape, dtype=torch.float32) - 0.5
+            ce_loss = self.loss.ce_loss(logit, query, torch.abs(margin-torch.sigmoid(bce_logit)))
+            kl_loss = self.loss.kl_loss(logit, knowledge)
+            if Config.latent:
+                gen_loss = self.decoder(input_ids, attention_mask, mask, latent)
+                return kl_loss * Config.kl_loss_scale + gen_loss * Config.gen_loss_scale + ce_loss * Config.ce_loss_scale
+            else:
+                return kl_loss * Config.kl_loss_scale + ce_loss * Config.ce_loss_scale
         else:
-            text = self.encoder(input_ids, attention_mask)
-            _, bce_logit = self.selector(text, None, None)
-            return bce_logit
+            text = self.main_encoder(input_ids, attention_mask)
+            logit = self.selector(text, scope)
+            return logit
+        # if Config.training:
+        #     text = self.encoder(input_ids, attention_mask)
+        #     _, _, bce_logit = self.selector(text, None, None)
+        #     bce_loss = self.loss.bce_loss(bce_logit, bce_label)
+        #     return bce_loss
+        # else:
+        #     text = self.encoder(input_ids, attention_mask)
+        #     _, bce_logit = self.selector(text, None, None)
+        #     return bce_logit
 
         # if Config.training:
         #     '''logit shape `(batch_size, rel_num)` 

@@ -12,14 +12,15 @@ class Loss(nn.Module):
         super(Loss, self).__init__()
         self.kl = nn.KLDivLoss(reduction="batchmean")   
         # weight=torch.from_numpy(weight).to(torch.float32)
-        self.crossEntropy = nn.CrossEntropyLoss(weight=torch.from_numpy(weight).to(torch.float32))
+        self.crossEntropy = nn.CrossEntropyLoss(weight=torch.from_numpy(weight).to(torch.float32), reduction="none")
         self.neg_crossEntropy = nn.CrossEntropyLoss(reduction='sum')
         self.bceloss = nn.BCEWithLogitsLoss()
         self.softmax = nn.Softmax(dim=1)
 
     
-    def ce_loss(self, logit, label):
+    def ce_loss(self, logit, label, bce_weight):
         ce_loss = self.crossEntropy(logit, label)
+        ce_loss = (ce_loss * bce_weight).mean()
         return ce_loss
     
     def ce_loss_neg(self, logit, label):
