@@ -159,9 +159,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         # save model     
         if (i+1) % Config.save_epoch == 0:
             checkpoint = {
-                # 'encoder': model.encoder.state_dict(),
+                'encoder': model.encoder.state_dict(),
                 'selector': model.selector.state_dict(),
-                'decoder': model.decoder.state_dict(),
             }
             torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
             # json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))
@@ -190,7 +189,6 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                     #     'pos2':batch_data['pos2'].cuda(),
                     # }
                     logit = parallel_model(**inputs)
-                    pdb.set_trace()
                     logit = logit.cpu().detach().numpy()
                     tot += logit.shape[0]
                     corr += np.logical_and(logit<0.5, label==0).sum()

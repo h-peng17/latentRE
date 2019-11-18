@@ -32,7 +32,7 @@ class LatentRE(nn.Module):
 
         # decoder_ckpt = torch.load(os.path.join(Config.save_path, "ckptlatent39"))
         # self.selector.load_state_dict(decoder_ckpt['selector'])
-        self.decoder = BertDecoder()
+        # self.decoder = BertDecoder()
         # self.decoder.load_state_dict(decoder_ckpt['decoder'])
         # for param in self.decoder.parameters():
             # param.requires_grad = False
