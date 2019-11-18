@@ -190,6 +190,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                     #     'pos2':batch_data['pos2'].cuda(),
                     # }
                     logit = parallel_model(**inputs)
+                    pdb.set_trace()
                     logit = logit.cpu().detach().numpy()
                     tot += logit.shape[0]
                     corr += np.logical_and(logit<0.5, label==0).sum()
