@@ -74,7 +74,7 @@ class LatentRE(nn.Module):
             logit, latent, _ = self.selector(main_text, scope, query)
             text = self.encoder(input_ids, attention_mask)
             _, _, bce_logit = self.selector(text, None, None)
-            margin = torch.ones(bce_logit.shape, dtype=torch.float32) - 0.5
+            margin = (torch.ones(bce_logit.shape, dtype=torch.float32) - 0.5).cuda()
             ce_loss = self.loss.ce_loss(logit, query, torch.abs(margin-torch.sigmoid(bce_logit)))
             kl_loss = self.loss.kl_loss(logit, knowledge)
             if Config.latent:
