@@ -173,8 +173,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 print("begin deving...")
                 parallel_model.eval()
                 Config.training = False
-                tot = 0
-                corr = 0
+                tot = 1
+                corr = 1
                 dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
                 for j in range(dev_iterator):
                     batch_data = dev_dataloader.next_batch()
