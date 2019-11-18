@@ -26,7 +26,10 @@ class LatentRE(nn.Module):
         self.encoder.load_state_dict(checkpoint["encoder"])
         for param in self.encoder.parameters():
             param.requires_grad = False # frozen
+            
         self.selector = Selector()
+        self.selector.load_state_dict(checkpoint['selector'])
+        self.selector.decoder_rel_mat.requires_grad = False
         # for param in self.selector.parameters():
         #     param.requires_grad = False # frozen
         self.main_encoder = Bert()
