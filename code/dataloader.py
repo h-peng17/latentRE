@@ -115,20 +115,12 @@ class Dataloader:
             self.data_word = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_pos1 = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_pos2 = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
+            self.data_pcnn_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_length = np.zeros((self.instance_tot, ), dtype=int)
-            self.data_decoder_length = np.zeros((self.instance_tot, ), dtype=int)
             self.data_query = np.zeros((self.instance_tot, ), dtype=int)
-            self.data_knowledge = np.zeros((self.instance_tot, Config.rel_num), dtype=float)
             # for encoder
             self.data_input_ids = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
             self.data_attention_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
-            # for decoder
-            self.data_decoder_input_ids = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
-            self.data_decoder_attention_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
-            self.data_token_mask = np.ones((self.instance_tot, Config.sen_len), dtype=int)
-            self.data_between_entity_mask = np.zeros((self.instance_tot, Config.sen_len), dtype=int)
-            self.data_labels = np.zeros((self.instance_tot, Config.sen_len), dtype=int) - 1 # -1
-            self.data_bce_label = np.zeros((self.instance_tot, ), dtype=int)
 
             def _process_loop(i):
                 instance = data[i]
@@ -137,65 +129,66 @@ class Dataloader:
                 sentence = instance["sentence"].lower()
                 try:
                     self.data_query[i] = rel2id[instance["relation"]]
-                    if self.data_query[i] != 0:
-                        self.data_bce_label[i] = 1
                 except:
                     self.data_query[i] = 0
                     print("relation error 1")
 
-                
                 # for cnn
-                # p1 = sentence.find(' ' + head + ' ')
-                # p2 = sentence.find(' ' + tail + ' ')
-                # if p1 == -1:
-                #     if sentence[:len(head) + 1] == head + " ":
-                #         p1 = 0
-                #     elif sentence[-len(head) - 1:] == " " + head:
-                #         p1 = len(sentence) - len(head)
-                #     else:
-                #         p1 = 0 # shouldn't happen
-                # else:
-                #     p1 += 1
-                # if p2 == -1:
-                #     if sentence[:len(tail) + 1] == tail + " ":
-                #         p2 = 0
-                #     elif sentence[-len(tail) - 1:] == " " + tail:
-                #         p2 = len(sentence) - len(tail)
-                #     else:
-                #         p2 = 0 # shouldn't happen
-                # else:
-                #     p2 += 1
-                # words = sentence.split()
-                # cur_ref_data_word = self.data_word[i]         
-                # cur_pos = 0
-                # pos1 = -1
-                # pos2 = -1
-                # for j, word in enumerate(words):
-                #     if j < Config.sen_len:
-                #         word = word.lower()
-                #         if word in word2id:
-                #             cur_ref_data_word[j] = word2id[word]
-                #         else:
-                #             cur_ref_data_word[j] = 1
-                #     if cur_pos == p1:
-                #         pos1 = j
-                #         p1 = -1
-                #     if cur_pos == p2:
-                #         pos2 = j
-                #         p2 = -1
-                #     cur_pos += len(word) + 1
-                # for j in range(j + 1, Config.sen_len):
-                #     cur_ref_data_word[j] = 0
-                # if pos1 == -1 or pos2 == -1:
-                #     raise Exception("[ERROR] Position error, index = {}, sentence = {}, head = {}, tail = {}".format(i, sentence, head, tail))
-                # if pos1 >= Config.sen_len:
-                #     pos1 = Config.sen_len - 1
-                # if pos2 >= Config.sen_len:
-                #     pos2 = Config.sen_len - 1
-                # for j in range(Config.sen_len):
-                #     self.data_pos1[i][j] = j - pos1 + Config.sen_len
-                #     self.data_pos2[i][j] = j - pos2 + Config.sen_len
-
+                p1 = sentence.find(' ' + head + ' ')
+                p2 = sentence.find(' ' + tail + ' ')
+                if p1 == -1:
+                    if sentence[:len(head) + 1] == head + " ":
+                        p1 = 0
+                    elif sentence[-len(head) - 1:] == " " + head:
+                        p1 = len(sentence) - len(head)
+                    else:
+                        p1 = 0 # shouldn't happen
+                else:
+                    p1 += 1
+                if p2 == -1:
+                    if sentence[:len(tail) + 1] == tail + " ":
+                        p2 = 0
+                    elif sentence[-len(tail) - 1:] == " " + tail:
+                        p2 = len(sentence) - len(tail)
+                    else:
+                        p2 = 0 # shouldn't happen
+                else:
+                    p2 += 1
+                words = sentence.split()
+                cur_ref_data_word = self.data_word[i]         
+                cur_pos = 0
+                pos1 = -1
+                pos2 = -1
+                for j, word in enumerate(words):
+                    if j < Config.sen_len:
+                        word = word.lower()
+                        if word in word2id:
+                            cur_ref_data_word[j] = word2id[word]
+                        else:
+                            cur_ref_data_word[j] = 1
+                    if cur_pos == p1:
+                        pos1 = j
+                        p1 = -1
+                    if cur_pos == p2:
+                        pos2 = j
+                        p2 = -1
+                    cur_pos += len(word) + 1
+                for j in range(j + 1, Config.sen_len):
+                    cur_ref_data_word[j] = 0
+                if pos1 == -1 or pos2 == -1:
+                    raise Exception("[ERROR] Position error, index = {}, sentence = {}, head = {}, tail = {}".format(i, sentence, head, tail))
+                if pos1 >= Config.sen_len:
+                    pos1 = Config.sen_len - 1
+                if pos2 >= Config.sen_len:
+                    pos2 = Config.sen_len - 1
+                for j in range(Config.sen_len):
+                    self.data_pos1[i][j] = j - pos1 + Config.sen_len
+                    self.data_pos2[i][j] = j - pos2 + Config.sen_len
+                pos_first = pos1 if pos1 <= pos2 else pos2
+                pos_second = pos1 + pos2 - pos_first
+                self.data_pcnn_mask[i][0:pos_first] = 1
+                self.data_pcnn_mask[i][pos_first:pos_second] = 2
+                self.data_pcnn_mask[i][pos_second:len(words)] = 3
 
                 # for bert encoder
                 bert_tokens = bert_tokenizer.tokenize(sentence)
@@ -214,145 +207,20 @@ class Dataloader:
                 self.data_attention_mask[i][0:length] = 1
                 self.data_length[i] = length    
                 
-                head_pos = bert_tokens.index(head_tokens[0])
-                tail_pos = bert_tokens.index(tail_tokens[0])
-                if head_pos < tail_pos:
-                    fir_pos = head_pos
-                    sec_pos = tail_pos
-                    len_fir = len(head_tokens)
-                    len_sec = len(tail_tokens)
-                else:
-                    fir_pos = tail_pos
-                    sec_pos = head_pos
-                    len_fir = len(tail_tokens)
-                    len_sec = len(head_tokens)
-                self.data_between_entity_mask[i][fir_pos+len_fir+1:sec_pos-1] = 1     
-                self.data_token_mask[i][head_pos-1:head_pos+len(head_tokens)+1] = 0
-                self.data_token_mask[i][tail_pos-1:tail_pos+len(tail_tokens)+1] = 0
-
-                # mask not entity
-                # self.data_input_ids[i][head_pos-1:head_pos+len(head_tokens)+1] = bert_tokenizer.convert_tokens_to_ids(bert_tokenizer.mask_token)   
-                # self.data_input_ids[i][tail_pos-1:tail_pos+len(tail_tokens)+1] = bert_tokenizer.convert_tokens_to_ids(bert_tokenizer.mask_token)
-
-                # self.data_input_ids[i][0:fir_pos-1] = bert_tokenizer.convert_tokens_to_ids(bert_tokenizer.mask_token)   
-                # self.data_input_ids[i][fir_pos+len_fir+1:sec_pos-1] = bert_tokenizer.convert_tokens_to_ids(bert_tokenizer.mask_token)
-                # self.data_input_ids[i][sec_pos+len_sec+1:length] = bert_tokenizer.convert_tokens_to_ids(bert_tokenizer.mask_token) 
-
-                # for mask 
-                # words = sentence.split()
-                # head_tokens = head.split()
-                # tail_tokens = tail.split()
-                # head_pos = words.index(head_tokens[0])
-                # words.insert(head_pos, "#")
-                # words.insert(head_pos+len(head_tokens)+1, "*")
-                # tail_pos = words.index(tail_tokens[0])
-                # words.insert(tail_pos, "^")
-                # words.insert(tail_pos+len(tail_tokens)+1, "`")
-                # sentence = ''
-                # for word in words:
-                #     sentence += word
-                #     sentence += ' '
-                # gpt2_tokens = gpt2_tokenizer.tokenize(sentence)
-                # # try:
-                # token1 = "Ġ#"
-                # token2 = "Ġ*"
-                # token3 = "Ġ^"
-                # token4 = "Ġ`"
-                # try:
-                #     gpt2_tokens.index(token1)
-                # except:
-                #     token1 = "#"
-                # try:
-                #     gpt2_tokens.index(token2)
-                # except:
-                #     token2 = '*'
-                # try:
-                #     gpt2_tokens.index(token3)
-                # except:
-                #     token3 = '^'
-                # try:
-                #     gpt2_tokens.index(token4)
-                # except:
-                #     token4 = '`'
-                # head_pos = gpt2_tokens.index(token1)
-                # tail_pos = gpt2_tokens.index(token3)
-                # if head_pos < tail_pos:
-                #     len_head = gpt2_tokens.index(token2) - 1 - head_pos
-                #     gpt2_tokens.remove(token1)
-                #     gpt2_tokens.remove(token2)
-                #     tail_pos = gpt2_tokens.index(token3)
-                #     len_tail = gpt2_tokens.index(token4) - 1 - tail_pos
-                #     gpt2_tokens.remove(token3)
-                #     gpt2_tokens.remove(token4)
-                # else:
-                #     len_tail = gpt2_tokens.index(token4) - 1 - tail_pos
-                #     gpt2_tokens.remove(token3)
-                #     gpt2_tokens.remove(token4)
-                #     head_pos = gpt2_tokens.index(token1)
-                #     len_head = gpt2_tokens.index(token2) - 1 - head_pos
-                #     gpt2_tokens.remove(token1)
-                #     gpt2_tokens.remove(token2)
-                # length = min(len(gpt2_tokens), Config.sen_len)
-                # if head_pos < tail_pos:
-                #     fir_pos = head_pos
-                #     sec_pos = tail_pos
-                #     len_fir = len_head
-                # else:
-                #     fir_pos = tail_pos
-                #     sec_pos = head_pos
-                #     len_fir = len_tail
-                # gpt2_tokens_final = []
-                # gpt2_tokens_final.extend(gpt2_tokens[sec_pos:length])
-                # gpt2_tokens_final.extend(gpt2_tokens[0:sec_pos])
-                # self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(gpt2_tokens_final[0:length])
-                # self.data_decoder_attention_mask[i][0:length] = 1
-                # # self.data_between_entity_mask[i][fir_pos+len_fir+length-sec_pos:length] = 1
-                # self.data_labels[i][fir_pos+len_fir+length-sec_pos:length] = self.data_decoder_input_ids[i][fir_pos+len_fir+length-sec_pos:length]
-                # self.data_decoder_length[i] = length
-                
-                # sentence = head + ' ' + '*' + ' ' + tail
-                # gpt2_tokens = gpt2_tokenizer.tokenize(sentence)
-                # rel_pos = gpt2_tokens.index('Ġ*')
-                # length = min(len(gpt2_tokens), Config.sen_len)
-                # self.data_decoder_input_ids[i][0:length] = gpt2_tokenizer.convert_tokens_to_ids(gpt2_tokens[0:length])
-                # self.data_decoder_attention_mask[i][0:length] = 1
-                # self.data_between_entity_mask[i][rel_pos] = 1
-                # self.data_labels[i][rel_pos+1:length] = self.data_decoder_input_ids[i][rel_pos+1:length]
-                # self.data_decoder_length[i] = length
-
-
-                # # knowledge 
-                # entities = instance["head"]["id"]+"#"+instance["tail"]["id"]
-                # rels = knowledge[entities]
-                # rel_num = len(rels)
-                # for rel in rels:
-                #     try:
-                #         self.data_knowledge[i][rel2id[rel]] = 1 / rel_num
-                #     except:
-                #         self.data_knowledge[i][0] += 1 / rel_num
-                #         print("relation error 2")
-
             print("begin multiple thread processing...")
             pool = mp.Pool(40)
             pool.map(_process_loop, range(0, self.instance_tot))
 
             # save array
             np.save(os.path.join("../data/pre_processed_data", "word_vec.npy"), self.word_vec)
-            # np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_word.npy"), self.data_word)
-            # np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos1.npy"), self.data_pos1)
-            # np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos2.npy"), self.data_pos2)
+            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_word.npy"), self.data_word)
+            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos1.npy"), self.data_pos1)
+            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos2.npy"), self.data_pos2)
+            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pcnn_mask.npy"), self.data_pcnn_mask)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_query.npy"), self.data_query)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_length.npy"), self.data_length)
-            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_length.npy"), self.data_decoder_length)
-            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy"), self.data_knowledge)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_input_ids.npy"), self.data_input_ids)
             np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_attention_mask.npy"), self.data_attention_mask)
-            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_input_ids.npy"), self.data_decoder_input_ids)
-            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_attention_mask.npy"), self.data_decoder_attention_mask)
-            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"), self.data_token_mask)
-            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_between_entity_mask.npy"), self.data_between_entity_mask) 
-            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_labels.npy"), self.data_labels) 
-            np.save(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_bce_label.npy"), self.data_bce_label)
             json.dump(self.entpair2scope, open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json"), 'w'))
             json.dump(self.relfact2scope, open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_relfact2scope.json"), "w"))
             print("end pre-process")
@@ -360,44 +228,25 @@ class Dataloader:
             print(end_time-start_time)
         else:
             print("There exists pre-processed data already. loading....")
-            self.word_vec = None
-            # self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
-            # self.data_word = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_word.npy"))
-            # self.data_pos1 = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos1.npy"))
-            # self.data_pos2 = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos2.npy"))
+            self.word_vec = np.load(os.path.join("../data/pre_processed_data", "word_vec.npy"))
+            self.data_word = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_word.npy"))
+            self.data_pos1 = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos1.npy"))
+            self.data_pos2 = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pos2.npy"))
+            self.data_pcnn_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_pcnn_mask.npy"))
             self.data_query = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_query.npy"))
             self.data_length = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_length.npy"))
-            self.data_decoder_length = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_length.npy"))
-            self.data_knowledge = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_knowledge.npy"))
             self.data_input_ids = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_input_ids.npy"))
             self.data_attention_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_attention_mask.npy"))
-            self.data_decoder_input_ids = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_input_ids.npy"))
-            self.data_decoder_attention_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_decoder_attention_mask.npy"))
-            self.data_labels = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_labels.npy"))
-            self.data_bce_label = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_bce_label.npy"))
             self.entpair2scope = json.load(open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_entpair2scope.json")))
             self.relfact2scope = json.load(open(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_relfact2scope.json")))
             Config.rel_num = len(json.load(open(os.path.join("../data/"+dataset, "rel2id.json"))))
-            # Config.word_tot = len(self.word_vec) + 2
-            # Config.word_embeeding_dim = len(self.word_vec[0])
+            Config.word_tot = len(self.word_vec) + 2
+            Config.word_embeeding_dim = len(self.word_vec[0])
             print("Finish loading...")
             self.instance_tot = self.data_input_ids.shape[0]
         self.entpair_tot = len(self.entpair2scope)
         self.relfact_tot = len(self.relfact2scope)
 
-        # mask mode 
-        if self.mode == "train":
-            if Config.mask_mode == "entity":
-                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
-            elif Config.mask_mode == "between":
-                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_between_entity_mask.npy"))
-            elif Config.mask_mode == "origin":
-                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
-            elif Config.mask_mode == "governor":
-                self.data_mask = np.load(os.path.join("../data/pre_processed_data", mode+"_governor_mask_index.npy"))
-            else:
-                self.data_mask = np.load(os.path.join("../data/pre_processed_data", dataset+"_"+mode+"_token_mask.npy"))
-        
         # order to train and scope to train
         self.flag = flag
         self.scope = []
@@ -437,21 +286,15 @@ class Dataloader:
             if Config.training:
                 return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
                         self.to_tensor(self.data_attention_mask[index][:, :max_length]), \
-                         self.to_tensor(self.data_mask[index][:, :max_length]), \
-                          self.to_tensor(self.data_query[index]), \
-                           self.to_tensor(self.data_knowledge[index]), \
-                            self.to_tensor(self.data_bce_label[index])
-                            # self.to_tensor(self.data_decoder_input_ids[index][:, :max_length]), \
-                            #  self.to_tensor(self.data_decoder_attention_mask[index][:, :max_length])
+                         self.to_tensor(self.data_query[index])
             else:
                 return self.to_tensor(self.data_input_ids[index][:, :max_length]), \
                         self.to_tensor(self.data_attention_mask[index][:, :max_length]), \
-                         self.data_bce_label[index]
-            # batch_data = {}
-            # batch_data["word"] = self.to_tensor(self.data_word[index])
-            # batch_data["pos1"] = self.to_tensor(self.data_pos1[index])
-            # batch_data["pos2"] = self.to_tensor(self.data_pos2[index])
-            # return batch_data
+                         self.to_tensor(self.data_word[index]), \
+                          self.to_tensor(self.data_pos1[index]), \
+                           self.to_tensor(self.data_pos2[index]), \
+                            self.to_tensor(self.data_pcnn_mask[index]), \
+                             None 
         else:
             batch_data = {}
             _word = []
@@ -459,30 +302,41 @@ class Dataloader:
             _pos2 = []
             _rel = []
             _label = []
-            _multi_rel = []
             _scope = []
+            _pcnn_mask = []
             cur_pos = 0
             for i in range(idx0, idx1):
                 _word.append(self.data_word[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _pos1.append(self.data_pos1[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _pos2.append(self.data_pos2[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
+                _pcnn_mask.append(self.data_pcnn_mask[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _rel.append(self.data_query[self.scope[self.order[i]][0]:self.scope[self.order[i]][1]])
                 _label.append(self.data_query[self.scope[self.order[i]][0]])
                 bag_size = self.scope[self.order[i]][1] - self.scope[self.order[i]][0]
                 _scope.append([cur_pos, cur_pos + bag_size])
                 cur_pos = cur_pos + bag_size
-                _one_multi_rel = np.zeros((Config.rel_num), dtype=np.int32)
-                for j in range(self.scope[self.order[i]][0], self.scope[self.order[i]][1]):
-                    _one_multi_rel[self.data_query[j]] = 1
-                _multi_rel.append(_one_multi_rel)
-            
-            batch_data['word'] = self.to_tensor(np.concatenate(_word))
-            batch_data['pos1'] = self.to_tensor(np.concatenate(_pos1))
-            batch_data['pos2'] = self.to_tensor(np.concatenate(_pos2))
-            batch_data['label'] = self.to_tensor(np.stack(_label))
-            batch_data['scope'] = np.stack(_scope)
 
-            return batch_data
+            if Config.training:
+                return self.to_tensor(np.concatenate(_word)), \
+                        self.to_tensor(np.concatenate(_pos1)), \
+                         self.to_tensor(np.concatenate(_pos2)), \
+                          self.to_tensor(np.concatenate(_pcnn_mask)), \
+                           self.to_tensor(np.stack(_label)), \
+                            np.stack(_scope)
+            else:
+                return self.to_tensor(np.concatenate(_word)), \ 
+                        self.to_tensor(np.concatenate(_word)), \
+                         self.to_tensor(np.concatenate(_word)), \
+                          self.to_tensor(np.concatenate(_pos1)), \
+                           self.to_tensor(np.concatenate(_pos2)), \
+                            self.to_tensor(np.concatenate(_pcnn_mask)), \
+                             np.stack(_scope)
+
+
+                       
+                      
+                     
+
 
 class AdvDataloader:
     def __init__(self, mode):

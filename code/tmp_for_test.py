@@ -91,19 +91,24 @@ class BagTest(object):
         return auc
     
     def forward(self, epoch):
-        if self.logit.size()[0] != self.scope[-1][1]:
-            exit("--------------------------wrong! The test data is not aligned!------------------------")
-        bag_logit = []
-        for i in range(len(self.scope)):
-            bag = self.logit[self.scope[i][0]:self.scope[i][1]]
-            _bag_logit, _ = torch.max(bag, 0)
-            bag_logit.append(_bag_logit)
+        # if self.logit.size()[0] != self.scope[-1][1]:
+            # exit("--------------------------wrong! The test data is not aligned!------------------------")
+        if Config.bag_type == "one":
+            bag_logit = []
+            for i in range(len(self.scope)):
+                bag = self.logit[self.scope[i][0]:self.scope[i][1]]
+                _bag_logit, _ = torch.max(bag, 0)
+                bag_logit.append(_bag_logit)
+            bag_logit = torch.stack(bag_logit)
+        elif Config.bag_type == "att":
+            bag_logit = self.logit
         
         # `(num_bag, rel_num)`
-        bag_logit = torch.stack(bag_logit)
         output = torch.argmax(bag_logit, 1).numpy()
         bag_logit = bag_logit.numpy().tolist()
 
+        if bag_logit.shape[0] != self.label.shape[0]:
+            exit("--------------------------wrong! The test data is not aligned!------------------------")
         # compute acc
         tot = self.label.shape[0]
         tot_na = (self.label==0).sum()

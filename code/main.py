@@ -96,38 +96,21 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         # epoch_iterator = trange(int(train_ins_tot/Config.batch_size), desc="epoch "+str(i))
         for j in range(int(train_ins_tot/Config.batch_size)):
             batch_data = train_dataloader.next_batch()
-            inputs = {
-                'input_ids':batch_data[0].cuda(),
-                'attention_mask':batch_data[1].cuda(),
-                'mask':batch_data[2].cuda(),
-                'query':batch_data[3].cuda(),
-                'knowledge':batch_data[4].cuda().float(),
-                'bce_label':batch_data[5].cuda().float(),
-            } 
-            # inputs = {
-            #     'pos_word':batch_data['pos_word'].cuda(),
-            #     'pos_pos1':batch_data['pos_pos1'].cuda(),
-            #     'pos_pos2':batch_data['pos_pos2'].cuda(),
-            #     'pos_label':batch_data['pos_label'].cuda(),
-            #     'pos_query':batch_data['pos_query'].cuda(),
-            #     'pos_scope':batch_data['pos_scope'],
-            #     'neg_word':batch_data['neg_word'].cuda(),
-            #     'neg_pos1':batch_data['neg_pos1'].cuda(),
-            #     'neg_pos2':batch_data['neg_pos2'].cuda(),
-            #     'neg_label':batch_data['neg_label'].cuda(),
-            #     'one_neg_label':batch_data['one_neg_label'].cuda(),
-            #     'mul_label':batch_data['mul_label'].cuda(),
-            #     'mul_num':batch_data['mul_num'].cuda(),
-            #     'neg_scope':batch_data['neg_scope'],
-            # }
-            # inputs = {
-            #     'word':batch_data['word'].cuda(),
-            #     'pos1':batch_data['pos1'].cuda(),
-            #     'pos2':batch_data['pos2'].cuda(),
-            #     'label':batch_data['label'].cuda(),
-            #     'scope':batch_data['scope']
-            # }
-
+            if Config.encoder == "bert":
+                inputs = {
+                    'input_ids':batch_data[0].cuda(),
+                    'attention_mask':batch_data[1].cuda(),
+                    'query':batch_data[2].cuda(),
+                } 
+            else:
+                inputs = {
+                    'word':batch_data[0].cuda(),
+                    'pos1':batch_data[1].cuda(),
+                    'pos2':batch_data[2].cuda(),
+                    'pcnn_mask':batch_data[3].cuda(),
+                    'label':batch_data[4].cuda(),
+                    'scope':batch_data[5]
+                }
             loss = parallel_model(**inputs)
             loss = loss.mean()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -138,19 +121,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             parallel_model.zero_grad()
             global_step += 1
 
-            # output = output.cpu().detach().numpy()
-            # label = batch_data[3].numpy()
-            # tot += label.shape[0]
-            # acc += (output == label).sum()
-            # sys.stdout.write("epoch: %d, batch: %d, acc: %.3f, loss: %.6f\r" % (i, j, (acc/tot), loss))
-            # sys.stdout.flush()
-
             sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
             sys.stdout.flush()
 
-            # final_input_words.append(batch_data[0].tolist())
-            # final_mask_words.append(batch_data[2].tolist())
-            # final_output_words.append(output.cpu().detach().numpy().tolist())
 
         print("")
         # clean gpu memory cache
@@ -163,38 +136,28 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 'selector': model.selector.state_dict(),
             }
             torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
-            # json.dump(final_input_words, open(os.path.join("../output", Config.info+'input.json'), 'w'))
-            # json.dump(final_mask_words, open(os.path.join("../output", Config.info+'mask.json'), 'w'))
-            # json.dump(final_output_words, open(os.path.join("../output", Config.info+"output.json"), 'w'))
         
-                # dev
+        # dev
         if (i+1) % Config.dev_step == 0:
             with torch.no_grad():
                 print("begin deving...")
                 parallel_model.eval()
                 Config.training = False
-                tot = 1
-                corr = 1
                 dev_iterator = (dev_ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (dev_ins_tot // Config.batch_size + 1)
                 for j in range(dev_iterator):
                     batch_data = dev_dataloader.next_batch()
                     inputs = {
                         'input_ids':batch_data[0].cuda(),
-                        'attention_mask':batch_data[1].cuda()
+                        'attention_mask':batch_data[1].cuda(),
+                        'word':batch_data[2].cuda(),
+                        'pos1':batch_data[3].cuda(),
+                        'pos2':batch_data[4].cuda(),
+                        'pcnn_mask':batch_data[5].cuda(),
+                        'scope':batch_data[6],
                     }
-                    label = batch_data[2]
-                    # inputs = {
-                    #     'word':batch_data['word'].cuda(),
-                    #     'pos1':batch_data['pos1'].cuda(),
-                    #     'pos2':batch_data['pos2'].cuda(),
-                    # }
                     logit = parallel_model(**inputs)
-                    # logit = logit.cpu().detach().numpy()
-                    # tot += logit.shape[0]
-                    # corr += np.logical_and(logit<0.5, label==0).sum()
-                    # corr += np.logical_and(logit>0.5, label==1).sum()
                     bagTest.update(logit.cpu().detach())
-                    sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f acc: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size)), (corr/tot)))
+                    sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
                     sys.stdout.flush()
                 print("")
                 bagTest.forward(i)  
@@ -249,27 +212,20 @@ if __name__ == "__main__":
                         default=0, help="batch size")
     parser.add_argument("--dataset", dest="dataset", type=str,
                         default='nyt',help='dataset to use')
-    parser.add_argument("--gen_loss_scale", dest="gen_loss_scale",type=float, 
-                        default=1.0, help="loss scale for bert MLM")
-    parser.add_argument("--kl_loss_scale", dest="kl_loss_scale",type=float, 
-                        default=1.0, help="kl loss scale")
-    parser.add_argument("--ce_loss_scale", dest="ce_loss_scale",type=float, 
-                        default=1.0, help="ce loss scale")
     parser.add_argument("--lr", dest="lr", type=float,
                         default=5e-5, help='learning rate')
     parser.add_argument("--info", dest="info",type=str, 
                         default="", help="info for model")
-
-
-    parser.add_argument("--latent", action='store_true', 
-                        help="Whether not to use label info")
-    parser.add_argument("--mask_mode",dest="mask_mode",type=str, 
-                        default="none",help="mask mode. you should select from {'none','entity','origin', 'governor'}")
-    parser.add_argument("--mode", dest="mode",type=str, 
-                        default="train", help="train or test")
-    
+    parser.add_argument('encoder', dest='encoder', type=str,
+                        default='cnn', help='encoder type')
     parser.add_argument("--train_bag", action='store_true', 
                         help="whether not to train on bag level")
+    parser.add_argument("--bag_type", dest="bag_type", type=str,
+                        default='att',help='bag type')
+    
+
+    parser.add_argument("--mode", dest="mode",type=str, 
+                        default="train", help="train or test")
     parser.add_argument("--eval_bag", action='store_true', 
                         help="whether not to eval on bag level")
     parser.add_argument("--max_epoch", dest="max_epoch", type=int, 
@@ -290,13 +246,11 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda
     Config.info = args.info
     Config.batch_size = args.batch_size
-    Config.gen_loss_scale = args.gen_loss_scale
-    Config.kl_loss_scale = args.kl_loss_scale
-    Config.ce_loss_scale = args.ce_loss_scale
     Config.lr = args.lr
-    Config.latent = args.latent
-    Config.mask_mode = args.mask_mode
+    Config.encoder = arg.encoder
     Config.train_bag = args.train_bag
+    Config.bag_type = args.bag_type
+    Config.num_feature = 3 if args.encoder == "pcnn"
     Config.eval_bag = args.eval_bag
     Config.max_epoch = args.max_epoch
     Config.dev_step = args.dev_step

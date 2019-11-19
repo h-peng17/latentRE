@@ -23,6 +23,9 @@ class Config():
     save_path = "../ckpt"
     training = True
     dataset = 'nyt'
+    num_feature = 1
+    encoder = "cnn"
+    bag_type = "one"
     
     # neg sample
     down_size = False

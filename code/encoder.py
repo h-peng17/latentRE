@@ -41,6 +41,7 @@ class CNN(nn.Module):
         self.net = nn.Conv1d(in_channels=input_size, out_channels=hidden_size, kernel_size=3, padding=1)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(Config.dropout)
+        self._minus = -100
         nn.init.xavier_uniform_(self.net.weight.data)
 
     def maxPooling(self, x):
@@ -50,8 +51,22 @@ class CNN(nn.Module):
         text, _ = torch.max(x, -1)
         return text
     
-    def forward(self, input):
-        return self.dropout(self.relu(self.maxPooling(self.net(input))))
+    def perMaxPooling(self, x, mask):
+        '''
+        x.size(): `(B, H, L)`
+        mask.size: `(B, 3, L)`
+        '''
+        pool1 = self.maxPooling(self.relu(x + self._minus * mask[:, 0:1, :])) # (B, H)
+        pool2 = self.maxPooling(self.relu(x + self._minus * mask[:, 1:2, :]))
+        pool3 = self.maxPooling(self.relu(x + self._minus * mask[:, 2:3, :]))
+        text = torch.cat([pool1, pool2, pool3], 1) # (B, 3H)
+        return text 
+    
+    def forward(self, input, mask=None):
+        if mask is None:
+            return self.dropout(self.relu(self.maxPooling(self.net(input))))
+        else:
+            return self.dropout(self.relu(self.perMaxPooling(self.net(input))))
 
 class RNN(nn.Module):
     '''

@@ -37,12 +37,10 @@ class GumbalSoftmax(nn.Module):
 class Selector(nn.Module):
     def __init__(self):
         super(Selector, self).__init__()
-        self.rel_mat = nn.Parameter(torch.randn(Config.hidden_size, Config.rel_num))
+        self.rel_mat = nn.Parameter(torch.randn(Config.hidden_size * Config.num_feature, Config.rel_num))
         self.bias = nn.Parameter(torch.randn(Config.rel_num))
         self.softmax = nn.Softmax(1)
         self.gumbal_softmax = GumbalSoftmax()
-        self.decoder_rel_mat = nn.Parameter(torch.randn(Config.hidden_size, 1))
-
 
         """for mask na relation embedding"""
         random.seed(Config.seed)
@@ -57,42 +55,53 @@ class Selector(nn.Module):
     def forward(self, x, scope, query = None):
         if Config.training:
             if Config.train_bag:
-                bag_repre = []
-                for i in range(scope.shape[0]):
-                    bag_hidden_mat = x[scope[i][0]:scope[i][1]]
-                    instance_logit = self.softmax(self.__logit__(bag_hidden_mat))
-                    j = torch.argmax(instance_logit[:, query[i]])
-                    bag_repre.append(bag_hidden_mat[j])
-                bag_repre = torch.stack(bag_repre)
-                bag_logit = self.__logit__(bag_repre)
-                return bag_logit
+                if Config.bag_type == "one":
+                    bag_repre = []
+                    for i in range(scope.shape[0]):
+                        bag_hidden_mat = x[scope[i][0]:scope[i][1]]
+                        instance_logit = self.softmax(self.__logit__(bag_hidden_mat))
+                        j = torch.argmax(instance_logit[:, query[i]])
+                        bag_repre.append(bag_hidden_mat[j])
+                    bag_repre = torch.stack(bag_repre)
+                    bag_logit = self.__logit__(bag_repre)
+                    return bag_logit
+                elif Config.bag_type == "att":
+                    bag_repre = []
+                    att_mat = self.rel_mat.transpose(0,1)[query]
+                    att_score = (x * att_mat).sum(-1)
+                    for i in range(scope.shape[0]):
+                        bag_hidden_mat = x[scope[i][0]:scope[i][1]] # (bag_size, hidden_size)
+                        softmax_att_score = self.softmax(att_score[scope[i][0]:scope[i][1]]) #(bag_size)
+                        bag_repre.append((softmax_att_score.unsqueeze(-1) * bag_hidden_mat).sum(0))
+                    bag_repre = torch.stack(bag_repre, 0)
+                    bag_logit = self.__logit__(bag_repre)
+                    return bag_logit
             else:
                 logit = self.__logit__(x)
-                # mask NA relation embedding because it give no infomation for decoder
-                gumbal_logit = self.gumbal_softmax(logit, Config.gumbel_temperature) * self.na_mask# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                # latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
-                
-                # add negative sample 
-                # `(batch)`
-                # pos_list = torch.argmax(logit, 1)
-                # neg_list = (torch.randint(1, 53, (pos_list.size()[0],), device=torch.cuda) + pos_list) % 53
-                # neg_latent = self.rel_mat.transpose(0,1)[neg_list]
-
-                latent = torch.matmul(gumbal_logit, self.rel_mat.transpose(0, 1))
-
-                bce_logit = torch.matmul(x, self.decoder_rel_mat).squeeze()
-
-                return logit, latent, bce_logit
+                return logit
         else:
             if Config.eval_bag:
-                bag_logit = []
-                for i in range(scope.shape[0]):
-                    bag_hidden_mat = x[scope[i][0]:scope[i][1]]
-                    instance_logit = self.softmax(self.__logit__(bag_hidden_mat))
-                    _bag_logit, _ = torch.max(instance_logit, 0)
-                    bag_logit.append(_bag_logit)
-                bag_logit = torch.stack(bag_logit)
-                return bag_logit
+                if Config.bag_type == "one":
+                    bag_logit = []
+                    for i in range(scope.shape[0]):
+                        bag_hidden_mat = x[scope[i][0]:scope[i][1]]
+                        instance_logit = self.softmax(self.__logit__(bag_hidden_mat))
+                        _bag_logit, _ = torch.max(instance_logit, 0)
+                        bag_logit.append(_bag_logit)
+                    bag_logit = torch.stack(bag_logit)
+                    return bag_logit
+                elif Config.bag_type == "att":
+                    bag_logit = []
+                    att_score = torch.matmul(x, self.rel_mat) # (nsum, N)
+                    for i in range(scope.shape[0]):
+                        bag_hidden_mat = x[scope[i][0]:scope[i][1]]
+                        softmax_att_score = self.softmax(att_score[scope[i][0]:scope[i][1]].transpose(0, 1)) # (N, (softmax)n) 
+                        rep_for_each_rel = torch.matmul(softmax_att_score, bag_hidden_mat) # (N, n) * (n, H) -> (N, H)
+                        logit_for_each_rel = self.softmax(self.__logit__(rep_for_each_rel)) # ((each rel)N, (logit)N)
+                        logit_for_each_rel = logit_for_each_rel.diag() # (N)
+                        bag_logit.append(logit_for_each_rel)
+                    bag_logit = torch.stack(bag_logit, 0)
+                    return bag_logit
             else:
-                return self.softmax(self.__logit__(x)), torch.sigmoid(torch.matmul(x, self.decoder_rel_mat).squeeze())
+                return self.softmax(self.__logit__(x))
                 
