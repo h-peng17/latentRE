@@ -71,7 +71,7 @@ class Selector(nn.Module):
                     att_score = (x * att_mat).sum(-1)
                     for i in range(scope.shape[0]):
                         bag_hidden_mat = x[scope[i][0]:scope[i][1]] # (bag_size, hidden_size)
-                        softmax_att_score = self.softmax(att_score[scope[i][0]:scope[i][1]]) #(bag_size)
+                        softmax_att_score = F.softmax(att_score[scope[i][0]:scope[i][1]]) #(bag_size)
                         bag_repre.append((softmax_att_score.unsqueeze(-1) * bag_hidden_mat).sum(0))
                     bag_repre = torch.stack(bag_repre, 0)
                     bag_logit = self.__logit__(bag_repre)
