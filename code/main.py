@@ -247,7 +247,7 @@ if __name__ == "__main__":
     Config.info = args.info
     Config.batch_size = args.batch_size
     Config.lr = args.lr
-    Config.encoder = arg.encoder
+    Config.encoder = args.encoder
     Config.train_bag = args.train_bag
     Config.bag_type = args.bag_type
     Config.num_feature = 3 if args.encoder == "pcnn" else 1
