@@ -216,7 +216,7 @@ if __name__ == "__main__":
                         default=5e-5, help='learning rate')
     parser.add_argument("--info", dest="info",type=str, 
                         default="", help="info for model")
-    parser.add_argument('encoder', dest='encoder', type=str,
+    parser.add_argument('--encoder', dest='encoder', type=str,
                         default='cnn', help='encoder type')
     parser.add_argument("--train_bag", action='store_true', 
                         help="whether not to train on bag level")
