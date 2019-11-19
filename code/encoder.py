@@ -66,7 +66,7 @@ class CNN(nn.Module):
         if mask is None:
             return self.dropout(self.relu(self.maxPooling(self.net(input))))
         else:
-            return self.dropout(self.relu(self.perMaxPooling(self.net(input))))
+            return self.dropout(self.relu(self.perMaxPooling(self.net(input), mask)))
 
 class RNN(nn.Module):
     '''
