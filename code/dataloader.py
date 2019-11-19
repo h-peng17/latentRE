@@ -324,7 +324,7 @@ class Dataloader:
                            self.to_tensor(np.stack(_label)), \
                             np.stack(_scope)
             else:
-                return self.to_tensor(np.concatenate(_word)), \ 
+                return self.to_tensor(np.concatenate(_word)), \
                         self.to_tensor(np.concatenate(_word)), \
                          self.to_tensor(np.concatenate(_word)), \
                           self.to_tensor(np.concatenate(_pos1)), \
