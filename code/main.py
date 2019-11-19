@@ -250,7 +250,7 @@ if __name__ == "__main__":
     Config.encoder = arg.encoder
     Config.train_bag = args.train_bag
     Config.bag_type = args.bag_type
-    Config.num_feature = 3 if args.encoder == "pcnn"
+    Config.num_feature = 3 if args.encoder == "pcnn" else 1
     Config.eval_bag = args.eval_bag
     Config.max_epoch = args.max_epoch
     Config.dev_step = args.dev_step
