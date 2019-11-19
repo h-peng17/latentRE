@@ -67,7 +67,8 @@ class Selector(nn.Module):
                     return bag_logit
                 elif Config.bag_type == "att":
                     bag_repre = []
-                    att_mat = self.rel_mat[:, query].transpose(0,1)
+                    att_mat = self.rel_mat[query]
+                    pdb.set_trace()
                     att_score = (x * att_mat).sum(-1)
                     for i in range(scope.shape[0]):
                         bag_hidden_mat = x[scope[i][0]:scope[i][1]] # (bag_size, hidden_size)

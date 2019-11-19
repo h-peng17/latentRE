@@ -109,7 +109,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                     'pos2':batch_data[2].cuda(),
                     'pcnn_mask':batch_data[3].cuda(),
                     'label':batch_data[4].cuda(),
-                    'scope':batch_data[5]
+                    'query':batch_data[5].cuda(),
+                    'scope':batch_data[6]
                 }
             loss = parallel_model(**inputs)
             loss = loss.mean()
@@ -222,6 +223,9 @@ if __name__ == "__main__":
                         help="whether not to train on bag level")
     parser.add_argument("--bag_type", dest="bag_type", type=str,
                         default='att',help='bag type')
+    parser.add_argument("--hidden_size", dest="hidden_size", type=int,
+                        default=768,help='hidden size')
+
     
 
     parser.add_argument("--mode", dest="mode",type=str, 
@@ -247,6 +251,7 @@ if __name__ == "__main__":
     Config.info = args.info
     Config.batch_size = args.batch_size
     Config.lr = args.lr
+    Config.hidden_size = args.hidden_size
     Config.encoder = args.encoder
     Config.train_bag = args.train_bag
     Config.bag_type = args.bag_type
