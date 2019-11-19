@@ -107,7 +107,7 @@ class BagTest(object):
         output = torch.argmax(bag_logit, 1).numpy()
         bag_logit = bag_logit.numpy().tolist()
 
-        if bag_logit.shape[0] != self.label.shape[0]:
+        if output.shape[0] != self.label.shape[0]:
             exit("--------------------------wrong! The test data is not aligned!------------------------")
         # compute acc
         tot = self.label.shape[0]
