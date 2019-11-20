@@ -323,7 +323,7 @@ class Dataloader:
                           self.to_tensor(np.concatenate(_pcnn_mask)), \
                            self.to_tensor(np.stack(_label)), \
                             self.to_tensor(np.concatenate(_rel)), \
-                            np.stack(_scope)
+                             np.stack(_scope)
             else:
                 return self.to_tensor(np.concatenate(_word)), \
                         self.to_tensor(np.concatenate(_word)), \

@@ -75,8 +75,9 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         params = model.parameters()
         optimizer = optim.Adam(params, Config.lr)
 
-    # amp training 
-    model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
+    if Config.optimizer == "adamw":
+        # amp training 
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
 
     # for bag test
     bagTest = BagTest(dev_dataloader.entpair2scope, dev_dataloader.data_query)
@@ -121,19 +122,19 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 }
             loss = parallel_model(**inputs)
             loss = loss.mean()
-            with amp.scale_loss(loss, optimizer) as scaled_loss:
-                scaled_loss.backward()
-            nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
+            if Config.optimizer == "adamw":
+                with amp.scale_loss(loss, optimizer) as scaled_loss:
+                    scaled_loss.backward()
+                nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
+            else:
+                loss.backward()
             optimizer.step()
             if Config.optimizer == "adamw":
                 scheduler.step()
             parallel_model.zero_grad()
             global_step += 1
-
             sys.stdout.write("epoch: %d, batch: %d, loss: %.6f\r" % (i, j, loss))
             sys.stdout.flush()
-
-
         print("")
         # clean gpu memory cache
         torch.cuda.empty_cache()
