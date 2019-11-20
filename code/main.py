@@ -60,13 +60,20 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     # Prepare optimizer and schedule (linear warmup and decay)
     t_total = train_ins_tot // Config.batch_size * Config.max_epoch
 
-    no_decay = ['bias', 'LayerNorm.weight']
-    optimizer_grouped_parameters = [
-        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': Config.weight_decay},
-        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-        ]
-    optimizer = AdamW(optimizer_grouped_parameters, lr=Config.lr, eps=Config.adam_epsilon, correct_bias=False)
-    scheduler = WarmupLinearSchedule(optimizer, warmup_steps=Config.warmup_steps, t_total=t_total)
+    if Config.optimizer == "adamw":
+        no_decay = ['bias', 'LayerNorm.weight']
+        optimizer_grouped_parameters = [
+            {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': Config.weight_decay},
+            {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+            ]
+        optimizer = AdamW(optimizer_grouped_parameters, lr=Config.lr, eps=Config.adam_epsilon, correct_bias=False)
+        scheduler = WarmupLinearSchedule(optimizer, warmup_steps=Config.warmup_steps, t_total=t_total)
+    elif Config.optimizer == "sgd":
+        params = model.parameters()
+        optimizer = optim.SGD(params, Config.lr)
+    elif Config.optimizer == "adam":
+        params = model.parameters()
+        optimizer = optim.Adam(params, Config.lr)
 
     # amp training 
     model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
@@ -118,7 +125,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                 scaled_loss.backward()
             nn.utils.clip_grad_norm_(amp.master_params(optimizer), Config.max_grad_norm)
             optimizer.step()
-            scheduler.step()
+            if Config.optimizer == "adamw":
+                scheduler.step()
             parallel_model.zero_grad()
             global_step += 1
 
@@ -225,6 +233,8 @@ if __name__ == "__main__":
                         default='att',help='bag type')
     parser.add_argument("--hidden_size", dest="hidden_size", type=int,
                         default=768,help='hidden size')
+    parser.add_argument("--optim", dest="optim", type=str,
+                        default='sgd',help='optim type')
 
     
 
@@ -253,6 +263,7 @@ if __name__ == "__main__":
     Config.lr = args.lr
     Config.hidden_size = args.hidden_size
     Config.encoder = args.encoder
+    Config.optimizer = args.optim
     Config.train_bag = args.train_bag
     Config.bag_type = args.bag_type
     Config.num_feature = 3 if args.encoder == "pcnn" else 1

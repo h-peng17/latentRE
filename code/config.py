@@ -26,6 +26,7 @@ class Config():
     num_feature = 1
     encoder = "cnn"
     bag_type = "one"
+    optimizer = 'sgd'
     
     # neg sample
     down_size = False

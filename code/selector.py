@@ -41,6 +41,7 @@ class Selector(nn.Module):
         self.bias = nn.Parameter(torch.randn(Config.rel_num))
         self.softmax = nn.Softmax(1)
         self.gumbal_softmax = GumbalSoftmax()
+        self.dropout = nn.Dropout(Config.dropout)
 
         """for mask na relation embedding"""
         random.seed(Config.seed)
@@ -63,6 +64,7 @@ class Selector(nn.Module):
                         j = torch.argmax(instance_logit[:, query[i]])
                         bag_repre.append(bag_hidden_mat[j])
                     bag_repre = torch.stack(bag_repre)
+                    bag_repre = self.dropout(bag_repre)
                     bag_logit = self.__logit__(bag_repre)
                     return bag_logit
                 elif Config.bag_type == "att":
@@ -74,6 +76,7 @@ class Selector(nn.Module):
                         softmax_att_score = F.softmax(att_score[scope[i][0]:scope[i][1]]) #(bag_size)
                         bag_repre.append((softmax_att_score.unsqueeze(-1) * bag_hidden_mat).sum(0))
                     bag_repre = torch.stack(bag_repre, 0)
+                    bag_repre = self.dropout(bag_repre)
                     bag_logit = self.__logit__(bag_repre)
                     return bag_logit
             else:

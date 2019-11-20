@@ -64,9 +64,9 @@ class CNN(nn.Module):
     
     def forward(self, input, mask=None):
         if mask is None:
-            return self.dropout(self.relu(self.maxPooling(self.net(input))))
+            return self.dropout(self.maxPooling(self.relu(self.net(input))))
         else:
-            return self.dropout(self.relu(self.perMaxPooling(self.net(input), mask)))
+            return self.dropout(self.perMaxPooling(self.relu(self.net(input), mask)))
 
 class RNN(nn.Module):
     '''
