@@ -51,7 +51,7 @@ class CNN(nn.Module):
         text, _ = torch.max(x, -1)
         return text
     
-    def perMaxPooling(self, x, mask):
+    def pieceWiseMaxPooling(self, x, mask):
         '''
         x.size(): `(B, H, L)`
         mask.size: `(B, 3, L)`
@@ -66,7 +66,7 @@ class CNN(nn.Module):
         if mask is None:
             return self.dropout(self.maxPooling(self.relu(self.net(input))))
         else:
-            return self.dropout(self.perMaxPooling(self.relu(self.net(input)), mask))
+            return self.dropout(self.pieceWiseMaxPooling(self.relu(self.net(input)), mask))
 
 class RNN(nn.Module):
     '''

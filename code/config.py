@@ -18,7 +18,7 @@ class Config():
     hidden_size = 768
     max_epoch = 3
     dev_step = 1
-    dropout = 0.5
+    dropout = 0
     save_epoch = 2
     save_path = "../ckpt"
     training = True
