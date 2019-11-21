@@ -37,6 +37,7 @@ class GumbalSoftmax(nn.Module):
 class Selector(nn.Module):
     def __init__(self):
         super(Selector, self).__init__()
+        self.att_mat = nn.Parameter(torch.randn(Config.hidden_size * Config.num_feature, Config.rel_num))
         self.rel_mat = nn.Parameter(torch.randn(Config.hidden_size * Config.num_feature, Config.rel_num))
         self.bias = nn.Parameter(torch.randn(Config.rel_num))
         self.softmax = nn.Softmax(-1)
@@ -69,8 +70,9 @@ class Selector(nn.Module):
                     return bag_logit
                 elif Config.bag_type == "att":
                     bag_repre = []
-                    att_mat = self.rel_mat.transpose(0,1)[query]
-                    att_score = (x * att_mat).sum(-1)
+                    rel_query = self.rel_mat.transpose(0,1)[query]
+                    attention = self.att_mat.transpose(0,1)[query]
+                    att_score = (x * attention * rel_query).sum(-1)
                     for i in range(scope.shape[0]):
                         bag_hidden_mat = x[scope[i][0]:scope[i][1]] # (bag_size, hidden_size)
                         softmax_att_score = self.softmax(att_score[scope[i][0]:scope[i][1]]) #(bag_size)
@@ -95,7 +97,7 @@ class Selector(nn.Module):
                     return bag_logit
                 elif Config.bag_type == "att":
                     bag_logit = []
-                    att_score = torch.matmul(x, self.rel_mat) # (nsum, N)
+                    att_score = torch.matmul(x, self.att_mat*self.rel_mat) # (nsum, N)
                     for i in range(scope.shape[0]):
                         bag_hidden_mat = x[scope[i][0]:scope[i][1]]
                         softmax_att_score = self.softmax(att_score[scope[i][0]:scope[i][1]].transpose(0, 1)) # (N, (softmax)n) 
