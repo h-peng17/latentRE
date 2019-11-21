@@ -42,7 +42,6 @@ class CNN(nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(Config.dropout)
         self._minus = -100
-        nn.init.xavier_uniform_(self.net.weight.data)
 
     def maxPooling(self, x):
         '''

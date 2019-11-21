@@ -44,6 +44,12 @@ class Selector(nn.Module):
         self.gumbal_softmax = GumbalSoftmax()
         self.dropout = nn.Dropout()
 
+
+        """init weight"""
+        nn.init.xavier_uniform(self.att_mat)
+        nn.init.xavier_uniform(self.rel_mat)
+        nn.init.normal(self.bias)
+
         """for mask na relation embedding"""
         random.seed(Config.seed)
         torch.manual_seed(Config.seed)
