@@ -11,7 +11,7 @@ from encoder import *
 class TextRepre(nn.Module):
     def __init__(self, word_vec):
         super(TextRepre, self).__init__()
-        self.word_embedding = nn.Embedding.from_pretrained(torch.from_numpy(word_vec).to(torch.float32))
+        self.word_embedding = nn.Embedding.from_pretrained(embeddings=torch.from_numpy(word_vec).to(torch.float32), freeze=False)
         self.pos1_embedding = nn.Embedding(Config.pos_num, Config.pos_embedding_dim)
         self.pos2_embedding = nn.Embedding(Config.pos_num, Config.pos_embedding_dim)
         nn.init.xavier_uniform_(self.pos1_embedding.weight.data)

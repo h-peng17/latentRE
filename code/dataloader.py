@@ -79,8 +79,8 @@ class Dataloader:
 
             # process word_vec
             word_vec = []
-            word_size = len(ori_word_vec[0]["vec"]))
-            word_vec.append(np.zeros((word_size, dtype=np.float32))
+            word_size = len(ori_word_vec[0]["vec"])
+            word_vec.append(np.zeros((word_size, dtype=np.float32)))
             word_vec.append(np.random.normal(loc = 0, scale = 0.05, size = word_size))
             for word in ori_word_vec:
                 word_vec.append(word["vec"])
