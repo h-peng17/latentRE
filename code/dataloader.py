@@ -79,8 +79,9 @@ class Dataloader:
 
             # process word_vec
             word_vec = []
-            word_vec.append(np.zeros((len(ori_word_vec[0]["vec"]))))
-            word_vec.append(np.random.random_sample(len(ori_word_vec[0]["vec"])))
+            word_size = len(ori_word_vec[0]["vec"]))
+            word_vec.append(np.zeros((word_size, dtype=np.float32))
+            word_vec.append(np.random.normal(loc = 0, scale = 0.05, size = word_size))
             for word in ori_word_vec:
                 word_vec.append(word["vec"])
             self.word_vec = np.asarray(word_vec)
@@ -165,7 +166,7 @@ class Dataloader:
                         if word in word2id:
                             cur_ref_data_word[j] = word2id[word]
                         else:
-                            cur_ref_data_word[j] = 1
+                            cur_ref_data_word[j] = word2id['unk']
                     if cur_pos == p1:
                         pos1 = j
                         p1 = -1
@@ -184,11 +185,11 @@ class Dataloader:
                 for j in range(Config.sen_len):
                     self.data_pos1[i][j] = j - pos1 + Config.sen_len
                     self.data_pos2[i][j] = j - pos2 + Config.sen_len
-                pos_first = pos1 if pos1 <= pos2 else pos2
-                pos_second = pos1 + pos2 - pos_first
-                self.data_pcnn_mask[i][0:pos_first] = 1
-                self.data_pcnn_mask[i][pos_first:pos_second] = 2
-                self.data_pcnn_mask[i][pos_second:len(words)] = 3
+                pos_first = min(pos1, pos2)
+                pos_second = max(pos1, pos2)
+                self.data_pcnn_mask[i][0:pos_first+1] = 1
+                self.data_pcnn_mask[i][pos_first+1:pos_second+1] = 2
+                self.data_pcnn_mask[i][pos_second+1:len(words)] = 3
 
                 # for bert encoder
                 bert_tokens = bert_tokenizer.tokenize(sentence)

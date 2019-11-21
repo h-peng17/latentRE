@@ -12,10 +12,10 @@ class Config():
     rel_num = 0 # This para is set in dataloader
     word_embeeding_dim = 0 # This para is set in dataloader
     pos_embedding_dim = 5
-    sen_len = 96
+    sen_len = 120
     pos_num = sen_len * 2
-    batch_size = 96
-    hidden_size = 768
+    batch_size = 160
+    hidden_size = 230
     max_epoch = 3
     dev_step = 1
     dropout = 0
