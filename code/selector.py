@@ -77,8 +77,8 @@ class Selector(nn.Module):
                 elif Config.bag_type == "att":
                     bag_repre = []
                     rel_query = self.rel_mat.transpose(0,1)[query]
-                    attention = self.att_mat.transpose(0,1)[query]
-                    att_score = (x * attention * rel_query).sum(-1)
+                    # attention = self.att_mat.transpose(0,1)[query]
+                    att_score = (x * rel_query).sum(-1)
                     for i in range(scope.shape[0]):
                         bag_hidden_mat = x[scope[i][0]:scope[i][1]] # (bag_size, hidden_size)
                         softmax_att_score = self.softmax(att_score[scope[i][0]:scope[i][1]]) #(bag_size)
@@ -103,7 +103,7 @@ class Selector(nn.Module):
                     return bag_logit
                 elif Config.bag_type == "att":
                     bag_logit = []
-                    att_score = torch.matmul(x, self.att_mat*self.rel_mat) # (nsum, N)
+                    att_score = torch.matmul(x, self.rel_mat) # (nsum, N)
                     for i in range(scope.shape[0]):
                         bag_hidden_mat = x[scope[i][0]:scope[i][1]]
                         softmax_att_score = self.softmax(att_score[scope[i][0]:scope[i][1]].transpose(0, 1)) # (N, (softmax)n) 
