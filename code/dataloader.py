@@ -57,8 +57,7 @@ class Dataloader:
             print("There dones't exist pre-processed data, pre-processing...")
             start_time = time.time()
             data = json.load(open(os.path.join("../data/"+dataset, mode+".json")))
-            knowledge = json.load(open(os.path.join("../data/knowledge",dataset+"_"+mode+'.json')))
-            ori_word_vec = json.load(open(os.path.join("../data/"+dataset,"word_vec.json")))
+            ori_word_vec = json.load(open(os.path.join("../data/nyt","word_vec.json")))
             Config.word_tot = len(ori_word_vec) + 2
 
             # Bert tokenizer
