@@ -126,7 +126,7 @@ class Dataloader:
                 instance = data[i]
                 head = instance["head"]["word"].lower()
                 tail = instance["tail"]["word"].lower()
-                sentence = instance["sentence"].lower()
+                sentence = " ".join(instance["sentence"].lower().split())
                 try:
                     self.data_query[i] = rel2id[instance["relation"]]
                 except:
