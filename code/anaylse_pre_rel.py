@@ -1,6 +1,7 @@
 
 import os 
 import numpy as np 
+import json 
 import sklearn.metrics
 
 
@@ -25,4 +26,9 @@ def eval(self, logit, label, relid):
         auc = sklearn.metrics.auc(x=recall, y=precision)
         print("auc = "+str(auc)+"| "+"F1 = "+str(f1))
         print('P@100: {} | P@200: {} | P@300: {} | Mean: {}'.format(precision[100], precision[200], precision[300], (precision[100] + precision[200] + precision[300]) / 3))
-        
+
+rel2id = json.load(open("../data/nyt/rel2id.json"))
+logit = np.load("../res/pcnn+att+wiki_logit.npy")
+label = np.load("../res/pcnn+att+wiki_label.npy")
+for i in range(1, len(rel2id)):
+    eval(logit, label, i)
