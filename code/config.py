@@ -27,6 +27,7 @@ class Config():
     encoder = "cnn"
     bag_type = "one"
     optimizer = 'sgd'
+    dump_logit = False
     
     # neg sample
     down_size = False

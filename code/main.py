@@ -231,12 +231,13 @@ if __name__ == "__main__":
     parser.add_argument("--train_bag", action='store_true', 
                         help="whether not to train on bag level")
     parser.add_argument("--bag_type", dest="bag_type", type=str,
-                        default='att',help='bag type')
+                        default='one',help='bag type')
     parser.add_argument("--hidden_size", dest="hidden_size", type=int,
                         default=768,help='hidden size')
     parser.add_argument("--optim", dest="optim", type=str,
                         default='sgd',help='optim type')
-
+    parser.add_argument("--dump_logit", action='store_true', 
+                        help="whether not to dump logit")
     
 
     parser.add_argument("--mode", dest="mode",type=str, 
@@ -274,6 +275,7 @@ if __name__ == "__main__":
     Config.save_epoch = args.save_epoch
     Config.dataset = args.dataset
     Config.seed = args.seed 
+    Config.dump_logit = args.dump_logit
     print(args)
 
     # set save path
