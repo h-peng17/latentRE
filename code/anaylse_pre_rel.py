@@ -5,7 +5,7 @@ import json
 import sklearn.metrics
 
 
-def eval(self, logit, label, relid):
+def eval(logit, label, relid):
         res_list = []
         tot = 0
         for i in range(len(logit)):
