@@ -37,6 +37,8 @@ class GumbalSoftmax(nn.Module):
 class Selector(nn.Module):
     def __init__(self):
         super(Selector, self).__init__()
+        random.seed(Config.seed)
+        torch.manual_seed(Config.seed)
         self.att_mat = nn.Parameter(torch.randn(Config.hidden_size * Config.num_feature, Config.rel_num))
         self.rel_mat = nn.Parameter(torch.randn(Config.hidden_size * Config.num_feature, Config.rel_num))
         self.bias = nn.Parameter(torch.randn(Config.rel_num))
@@ -51,8 +53,6 @@ class Selector(nn.Module):
         nn.init.normal_(self.bias)
 
         """for mask na relation embedding"""
-        random.seed(Config.seed)
-        torch.manual_seed(Config.seed)
         self.na_mask = nn.Parameter(torch.ones(Config.rel_num), requires_grad=False)
         self.na_mask[0] = 0
         
