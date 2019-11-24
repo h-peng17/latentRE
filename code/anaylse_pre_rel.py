@@ -43,6 +43,7 @@ def log(auc, f1, relid, precision):
     f.close()
 
 def draw(result, filename):
+    print("processing " + filename)
     data = []
     for res in result:
         if math.isnan(res[1]):
@@ -61,7 +62,7 @@ def draw(result, filename):
         plt.text(rect.get_x()+rect.get_width()/2.- 0.2, 1.03*height, "")
     plt.xticks(rotation=60)
     plt.tick_params(labelsize=5)
-    plt.savefig(os.path.join("../pic", filename))
+    plt.savefig(os.path.join("../pic", filename+".pdf"))
     plt.close()
 
 
@@ -77,7 +78,7 @@ def drawAll(logit_name):
         auc = eval(logit, label, i)
         _result.append(auc)
         result.append(_result)
-    draw(result, logit_name)
+    draw(result, logit_name.split(".")[0])
 
 
 def main():
