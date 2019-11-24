@@ -24,8 +24,11 @@ def eval(logit, label, relid):
         
         f1 = (2*precision*recall / (recall+precision+1e-20)).max()
         auc = sklearn.metrics.auc(x=recall, y=precision)
+        print("---------------------------------------------------------")
+        print("relation id: %d" % relid)
         print("auc = "+str(auc)+"| "+"F1 = "+str(f1))
         print('P@100: {} | P@200: {} | P@300: {} | Mean: {}'.format(precision[100], precision[200], precision[300], (precision[100] + precision[200] + precision[300]) / 3))
+        print("---------------------------------------------------------")
 
 rel2id = json.load(open("../data/nyt/rel2id.json"))
 logit = np.load("../res/pcnn+att+wiki_logit.npy")

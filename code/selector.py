@@ -46,9 +46,9 @@ class Selector(nn.Module):
 
 
         """init weight"""
-        nn.init.xavier_uniform(self.att_mat)
-        nn.init.xavier_uniform(self.rel_mat)
-        nn.init.normal(self.bias)
+        nn.init.xavier_uniform_(self.att_mat)
+        nn.init.xavier_uniform_(self.rel_mat)
+        nn.init.normal_(self.bias)
 
         """for mask na relation embedding"""
         random.seed(Config.seed)
