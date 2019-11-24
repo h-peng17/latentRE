@@ -37,8 +37,6 @@ class GumbalSoftmax(nn.Module):
 class Selector(nn.Module):
     def __init__(self):
         super(Selector, self).__init__()
-        random.seed(Config.seed)
-        torch.manual_seed(Config.seed)
         self.att_mat = nn.Parameter(torch.randn(Config.hidden_size * Config.num_feature, Config.rel_num))
         self.rel_mat = nn.Parameter(torch.randn(Config.hidden_size * Config.num_feature, Config.rel_num))
         self.bias = nn.Parameter(torch.randn(Config.rel_num))

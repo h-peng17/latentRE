@@ -9,7 +9,6 @@ import matplotlib
 # Use 'Agg' so this program could run on a remote server
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.pyplot import MultipleLocator
 
 def eval(logit, label, relid):
         res_list = []
