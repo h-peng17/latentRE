@@ -86,3 +86,4 @@ def main():
     for logit_name in logit_list:
         drawAll(logit_name)
     
+main()
