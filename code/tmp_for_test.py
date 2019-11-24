@@ -119,14 +119,12 @@ class BagTest(object):
         print("dev: acc:%.3f, na_acc:%.3f, not_na_acc:%.3f" % (tot_corr/tot, na_corr/tot_na, not_na_corr/tot_not_na))
 
         # compute auc
-        if Config.dump_logit:
-            np.save(os.path.join("../res", Config.info+"_logit.npy"), np.array(bag_logit))
-            np.save(os.path.join("../res", Config.info+"_label.npy"), self.multi_label)
         auc = self.eval(bag_logit, self.multi_label)
         if auc > self.auc:
             self.auc = auc
             self.epoch = epoch
-            
+            if Config.dump_logit:
+                np.save(os.path.join("../res", Config.info+"_logit.npy"), np.array(bag_logit))
         self.clean()
 
 
