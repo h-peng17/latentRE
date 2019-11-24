@@ -11,7 +11,6 @@ from encoder import *
 class TextRepre(nn.Module):
     def __init__(self, word_vec):
         super(TextRepre, self).__init__()
-        random.seed(Config.seed)
         torch.manual_seed(Config.seed)
         self.word_embedding = nn.Embedding.from_pretrained(embeddings=torch.from_numpy(word_vec).to(torch.float32), freeze=False)
         self.pos1_embedding = nn.Embedding(Config.pos_num, Config.pos_embedding_dim)
