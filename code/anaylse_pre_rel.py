@@ -42,7 +42,7 @@ def log(auc, f1, relid, precision):
     f.write("---------------------------------------------------------")
     f.close()
 
-def draw(result):
+def draw(result, filename):
     data = []
     for res in result:
         if math.isnan(res[1]):
@@ -61,19 +61,27 @@ def draw(result):
         plt.text(rect.get_x()+rect.get_width()/2.- 0.2, 1.03*height, "")
     plt.xticks(rotation=60)
     plt.tick_params(labelsize=5)
-    plt.savefig("../res/pic/bert+nyt.pdf")
+    plt.savefig(os.path.join("../pic", filename))
     plt.close()
 
 
-rel2id = json.load(open("../data/nyt/rel2id.json"))
-logit = np.load("../res/pcnn+att+wiki_logit.npy")
-label = np.load("../res/label.npy")
-result = []
-for i in range(1, len(rel2id)):
-    _result = []
-    _result.append(i)
-    auc = eval(logit, label, i)
-    _result.append(auc)
-    result.append(_result)
 
-draw(result)
+def drawAll(logit_name):
+    rel2id = json.load(open("../data/nyt/rel2id.json"))
+    logit = np.load(os.path.join("../res", logit_name))
+    label = np.load("../res/label.npy")
+    result = []
+    for i in range(1, len(rel2id)):
+        _result = []
+        _result.append(i)
+        auc = eval(logit, label, i)
+        _result.append(auc)
+        result.append(_result)
+    draw(result, logit_name)
+
+
+def main():
+    logit_list = ["bert+nyt_logit.npy", "cnn+one+nyt_logit.npy", "pcnn+one+nyt_logit.npy", "cnn+att+nyt_logit.npy", "pcnn+att+nyt_logit.npy"]
+    for logit_name in logit_list:
+        drawAll(logit_name)
+    
