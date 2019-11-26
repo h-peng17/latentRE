@@ -194,10 +194,18 @@ class Dataloader:
                 bert_tokens = bert_tokenizer.tokenize(sentence)
                 head_tokens = bert_tokenizer.tokenize(head)
                 tail_tokens = bert_tokenizer.tokenize(tail)
-                head_pos = bert_tokens.index(head_tokens[0])
+                try:
+                    head_pos = bert_tokens.index(head_tokens[0])
+                except:
+                    print("error head")
+                    head_pos = 10
                 bert_tokens.insert(head_pos, "[unused0]")
                 bert_tokens.insert(head_pos+len(head_tokens)+1, "[unused1]")
-                tail_pos = bert_tokens.index(tail_tokens[0])
+                try:
+                    tail_pos = bert_tokens.index(tail_tokens[0])
+                except:
+                    print("error tail")
+                    tail_pos = 10
                 bert_tokens.insert(tail_pos, "[unused2]")
                 bert_tokens.insert(tail_pos+len(tail_tokens)+1, "[unused3]")
                 bert_tokens.insert(0, "[CLS]")

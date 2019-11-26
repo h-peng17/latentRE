@@ -109,7 +109,7 @@ def random_sample():
     relfact2scope[curr_relfact].append(len(data))
 
     print("begin sample...")
-    train_sample_num = 500000
+    train_sample_num = 1000000
     dev_sample_num = int(train_sample_num * (len(dev)/len(train)))
     test_sample_num = int(train_sample_num * (len(test)/len(train)))
     train_scope = []
