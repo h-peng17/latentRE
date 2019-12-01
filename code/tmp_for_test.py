@@ -46,6 +46,7 @@ class BagTest(object):
             
         self.auc = 0
         self.epoch = 0
+        self.pr = 0
     
     def update(self, logit):
         self.logit = torch.cat((self.logit, logit),0)
@@ -88,7 +89,7 @@ class BagTest(object):
             plt.grid(True)
             plt.savefig(os.path.join(Config.save_path, 'pr_curve_' + Config.info + '.png'))
             plt.close()
-        return auc
+        return auc, (precision[100] + precision[200] + precision[300]) / 3
     
     def forward(self, epoch):
         # if self.logit.size()[0] != self.scope[-1][1]:
@@ -119,10 +120,12 @@ class BagTest(object):
         print("dev: acc:%.3f, na_acc:%.3f, not_na_acc:%.3f" % (tot_corr/tot, na_corr/tot_na, not_na_corr/tot_not_na))
 
         # compute auc
-        auc = self.eval(bag_logit, self.multi_label)
+        auc, pr = self.eval(bag_logit, self.multi_label)
         if auc > self.auc:
             self.auc = auc
             self.epoch = epoch
+        if pr > self.pr
+            self.pr = pr
             if Config.dump_logit:
                 np.save(os.path.join("../res", Config.info+"_logit.npy"), np.array(bag_logit))
         self.clean()

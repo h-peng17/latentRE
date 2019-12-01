@@ -26,8 +26,17 @@ def convert(filename, mode):
     return data 
     # json.dump(data, open(os.path.join("../data/wiki", mode), 'w'))
 
+def wash(ori_data):
+    data = []
+    for ins in ori_data:
+        if ins["relation"] == "P0":
+            continue
+        data.append(ins)
+    return data
+
 def sample_na(mode, NA_data, NA_relfact2scope):
     data = json.load(open(os.path.join("../data/wiki", mode)))
+    data = wash(data)
     ori_length = len(data)
     data.sort(key=lambda a: a['head']['id'] + '#' + a['tail']['id'] + "#" + a["relation"])   
     relfact2scope = {}
@@ -90,9 +99,9 @@ def format_sample():
     relfact2scope =  sample_na("test.json", data, relfact2scope)
 
 def random_sample():
-    train = json.load(open("../data/wiki/train.json"))
-    dev = json.load(open("../data/wiki/dev.json"))
-    test = json.load(open("../data/wiki/test.json"))
+    train = wash(json.load(open("../data/wiki/train.json")))
+    dev = wash(json.load(open("../data/wiki/dev.json")))
+    test = wash(json.load(open("../data/wiki/test.json")))
     data = convert("NA.json", "")
     # sort
     print("sorting....")
@@ -109,7 +118,7 @@ def random_sample():
     relfact2scope[curr_relfact].append(len(data))
 
     print("begin sample...")
-    train_sample_num = 1000000
+    train_sample_num = 500000
     dev_sample_num = int(train_sample_num * (len(dev)/len(train)))
     test_sample_num = int(train_sample_num * (len(test)/len(train)))
     train_scope = []
