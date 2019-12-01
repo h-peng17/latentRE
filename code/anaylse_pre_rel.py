@@ -81,9 +81,54 @@ def drawAll(logit_name):
     draw(result, logit_name.split(".")[0])
 
 
-def main():
-    logit_list = ["bert+nyt_logit.npy", "cnn+one+nyt_logit.npy", "pcnn+one+nyt_logit.npy", "cnn+att+nyt_logit.npy", "pcnn+att+nyt_logit.npy"]
-    for logit_name in logit_list:
-        drawAll(logit_name)
+
+# def main():
+#     logit_list = ["bert+nyt_logit.npy", "cnn+one+nyt_logit.npy", "pcnn+one+nyt_logit.npy", "cnn+att+nyt_logit.npy", "pcnn+att+nyt_logit.npy"]
+#     for logit_name in logit_list:
+#         drawAll(logit_name)
     
+# main()
+
+
+def test_eval(logit, label, mode):
+        res_list = []
+        tot = 0
+        for i in range(len(logit)):
+            for j in range(1, len(logit[i])):
+                tot += label[i][j]
+                res_list.append([logit[i][j], label[i][j]])
+                
+        #sort res_list
+        res_list.sort(key=lambda val: val[0], reverse=True)
+        precision = np.zeros((len(res_list)), dtype=float)
+        recall = np.zeros((len(res_list)), dtype=float)
+        corr = 0
+        for i, res in enumerate(res_list):
+            corr += res[1]
+            precision[i] = corr/(i+1)
+            recall[i] = corr/tot
+        
+        f1 = (2*precision*recall / (recall+precision+1e-20)).max()
+        auc = sklearn.metrics.auc(x=recall, y=precision)
+        print("auc = "+str(auc)+"| "+"F1 = "+str(f1))
+        print('P@100: {} | P@200: {} | P@300: {} | Mean: {}'.format(precision[100], precision[200], precision[300], (precision[100] + precision[200] + precision[300]) / 3))
+        
+        plt.plot(recall, precision, lw=2, label=mode)
+        plt.xlabel('Recall')
+        plt.ylabel('Precision')
+        plt.ylim([0.3, 1.0])
+        plt.xlim([0.0, 0.4])
+        plt.title('Precision-Recall')
+        plt.legend(loc="upper right")
+        plt.grid(True)
+        plt.savefig(os.path.join("../pic", 'nyt_pr_curve.png'))
+        # plt.close()
+
+def main():
+    logits = ["bert_logit.npy", "cnn+att_logit.npy", "pcnn+att_logit.npy"]
+    label = np.load("../res/label.npy")
+    for file in logits:
+        logit = np.load(os.path.join("../res", file))
+        test_eval(logit, label, file.split(".")[0])
+
 main()

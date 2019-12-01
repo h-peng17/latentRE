@@ -124,10 +124,10 @@ class BagTest(object):
         if auc > self.auc:
             self.auc = auc
             self.epoch = epoch
-        if pr > self.pr
-            self.pr = pr
             if Config.dump_logit:
                 np.save(os.path.join("../res", Config.info+"_logit.npy"), np.array(bag_logit))
+        if pr > self.pr:
+            self.pr = pr
         self.clean()
 
 
