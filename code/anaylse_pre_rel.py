@@ -83,7 +83,7 @@ def drawAll(logit_name):
 
 
 # def main():
-#     logit_list = ["bert+nyt_logit.npy", "cnn+one+nyt_logit.npy", "pcnn+one+nyt_logit.npy", "cnn+att+nyt_logit.npy", "pcnn+att+nyt_logit.npy"]
+#     logit_list = ["bert_logit.npy"]
 #     for logit_name in logit_list:
 #         drawAll(logit_name)
     
