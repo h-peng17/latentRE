@@ -182,6 +182,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     log(bagTest.auc, bagTest.epoch)
 
 def test(model, test_dataloader, ins_tot):
+    torch.cuda.empty_cache()
+    pdb.set_trace()
     # just for bag test
     bagTest = BagTest(test_dataloader.entpair2scope, test_dataloader.data_query)
     print("begin testing...")
