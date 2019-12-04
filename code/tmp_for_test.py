@@ -130,6 +130,7 @@ class BagTest(object):
         if pr > self.pr:
             self.pr = pr
         self.clean()
+        return auc
 
 
 

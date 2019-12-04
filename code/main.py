@@ -92,6 +92,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
     best_epoch = 0
     global_step = 0
     set_seed(args)
+    best_auc = 0
     for i in range(Config.max_epoch):
         # train
         acc = 0
@@ -140,12 +141,8 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
         torch.cuda.empty_cache()
         
         # save model     
-        if (i+1) % Config.save_epoch == 0:
-            checkpoint = {
-                'encoder': model.encoder.state_dict(),
-                'selector': model.selector.state_dict(),
-            }
-            torch.save(checkpoint, os.path.join(Config.save_path, "ckpt"+Config.info+str(i)))
+        # if (i+1) % Config.save_epoch == 0:
+
         
         # dev
         if (i+1) % Config.dev_step == 0:
@@ -170,10 +167,16 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
                     sys.stdout.write("batch_size:%d, dev_ins_tot:%d, batch:%d, ,dev_processed: %.3f\r" % (Config.batch_size, dev_ins_tot, j, j/((dev_ins_tot // Config.batch_size))))
                     sys.stdout.flush()
                 print("")
-                bagTest.forward(i)  
+                auc = bagTest.forward(i)  
                 print("---------------------------------------------------------------------------------------------------")
                 #clean gpu memory cache
                 torch.cuda.empty_cache()
+        if  auc > best_auc:
+            best_auc = auc
+            checkpoint = {
+                'model': model.state_dict(),
+            }
+            torch.save(checkpoint, os.path.join(Config.save_path, Config.info))
         
     # after iterator, save the best perfomance
     log(bagTest.auc, bagTest.epoch)
@@ -181,37 +184,29 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
 def test(model, test_dataloader, ins_tot):
     # just for bag test
     bagTest = BagTest(test_dataloader.entpair2scope, test_dataloader.data_query)
-    model.cuda()
     print("begin testing...")
+    # restore the stored params
+    checkpoint = torch.load(os.path.join(Config.save_path, Config.info))
+    model.load_state_dict(checkpoint["model"])
+    model.eval()
     Config.training = False
-    for i in range(1, Config.max_epoch):
-        # restore the stored params
-        if not os.path.exists(os.path.join(Config.save_path, "ckpt"+str(i))):
-            continue
-        checkpoint = torch.load(os.path.join(Config.save_path, "ckpt"+str(i)))
-        model.load_state_dict(checkpoint["model"])
-        model.eval()
-        logits = []
-        labels = []
-        tot = 0
-        tot_na = 0
-        tot_not_na = 0
-        tot_correct = 0
-        na_correct = 0
-        not_na_correct = 0
-        test_iterator = (ins_tot // Config.batch_size) if (dev_ins_tot % Config.batch_size == 0) else (ins_tot // Config.batch_size + 1)
-        for j in range(test_iterator):
-            batch_data = test_dataloader.next_batch()
-            inputs = {
-                'input_ids':to_int_tensor(batch_data['input_ids']),
-                'attention_mask':to_int_tensor(batch_data['attention_mask']),
-                'scope':batch_data['scope']
-            }
-            logit = model(**inputs)
-            bagTest.update(logit.cpu().detach())
-            sys.stdout.write("test_processed: %.3f\r" % ((j+1) / test_iterator))
-            sys.stdout.flush()
-        bagTest.forward(i)
+    test_iterator = (ins_tot // Config.batch_size) if (ins_tot % Config.batch_size == 0) else (ins_tot // Config.batch_size + 1)
+    for j in range(test_iterator):
+        batch_data = test_dataloader.next_batch()
+        inputs = {
+            'input_ids':batch_data[0].cuda(),
+            'attention_mask':batch_data[1].cuda(),
+            'word':batch_data[2].cuda(),
+            'pos1':batch_data[3].cuda(),
+            'pos2':batch_data[4].cuda(),
+            'pcnn_mask':batch_data[5].cuda(),
+            'scope':batch_data[6],
+        }
+        logit = model(**inputs)
+        bagTest.update(logit.cpu().detach())
+        sys.stdout.write("test_processed: %.3f\r" % ((j+1) / test_iterator))
+        sys.stdout.flush()
+    bagTest.forward(0)
 
 
 if __name__ == "__main__":
@@ -287,7 +282,7 @@ if __name__ == "__main__":
     if args.mode == "train":
         # train
         train_dataloader = Dataloader('train', 'relfact' if Config.train_bag else 'ins', Config.dataset)
-        dev_dataloader = Dataloader('test', 'entpair' if Config.eval_bag else 'ins', Config.dataset)
+        dev_dataloader = Dataloader('dev', 'entpair' if Config.eval_bag else 'ins', Config.dataset)
         model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
         model.cuda()
         train(args,
@@ -296,6 +291,15 @@ if __name__ == "__main__":
               dev_dataloader, 
               train_dataloader.relfact_tot if Config.train_bag else train_dataloader.instance_tot,
               dev_dataloader.entpair_tot if Config.eval_bag else dev_dataloader.instance_tot)
+
+        # test
+        test_dataloader = Dataloader('test', 'entpair' if Config.eval_bag else 'ins', Config.dataset)
+        model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
+        model.cuda()
+        test(model,
+             test_dataloader,
+             test_dataloader.entpair_tot if Config.eval_bag else test_dataloader.instance_tot)
+
 
 
         
