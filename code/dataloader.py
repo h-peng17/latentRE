@@ -192,11 +192,11 @@ class Dataloader:
                 self.data_pcnn_mask[i][pos_first+1:pos_second+1] = 2
                 self.data_pcnn_mask[i][pos_second+1:len(words)] = 3
 
-                # self.data_word[i][0:pos_first] = 0
-                # self.data_word[i][pos_first+len_first:pos_second] = 0
-                # self.data_word[i][pos_second+len_second:-1] = 0
-                self.data_word[i][pos_first:pos_first+len_first] = 0
-                self.data_word[i][pos_second:pos_second+len_second] = 0
+                self.data_word[i][0:pos_first] = 0
+                self.data_word[i][pos_first+len_first:pos_second] = 0
+                self.data_word[i][pos_second+len_second:-1] = 0
+                # self.data_word[i][pos_first:pos_first+len_first] = 0
+                # self.data_word[i][pos_second:pos_second+len_second] = 0
 
                 # for bert encoder
                 # bert_tokens = bert_tokenizer.tokenize(sentence)
