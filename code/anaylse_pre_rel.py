@@ -60,11 +60,21 @@ def draw(result, filename):
     for rect in plt.bar(range(len(y)), y, color='b', tick_label=x):
         height = rect.get_height()
         plt.text(rect.get_x()+rect.get_width()/2.- 0.2, 1.03*height, "")
-    plt.xticks(rotation=60)
-    plt.tick_params(labelsize=5)
+    plt.xticks(rotation=90)
+    plt.tick_params(labelsize=0)
     plt.savefig(os.path.join("../pic", filename+".pdf"))
     plt.close()
 
+def _save(result, filename):
+    data = []
+    for res in result:
+        if math.isnan(res[1]):
+            res[1] = 0
+            data.append(res)
+        else:
+            data.append(res)
+    data.sort(key=lambda a: a[1], reverse=True)
+    json.dump(data, open(filename, 'w'))
 
 
 def drawAll(logit_name):
@@ -78,16 +88,16 @@ def drawAll(logit_name):
         auc = eval(logit, label, i)
         _result.append(auc)
         result.append(_result)
-    draw(result, logit_name.split(".")[0])
+    _save(result, "nyt_bert_result.json")
+    # draw(result, logit_name.split(".")[0])
 
 
-
-# def main():
-#     logit_list = ["bert_logit.npy"]
-#     for logit_name in logit_list:
-#         drawAll(logit_name)
+def main():
+    logit_list = ["bert_logit.npy"]
+    for logit_name in logit_list:
+        drawAll(logit_name)
     
-# main()
+main()
 
 
 def test_eval(logit, label, mode):
@@ -124,11 +134,11 @@ def test_eval(logit, label, mode):
         plt.savefig(os.path.join("../pic", 'nyt_pr_curve.png'))
         # plt.close()
 
-def main():
-    logits = ["bert_logit.npy", "cnn+att_logit.npy", "pcnn+att_logit.npy"]
-    label = np.load("../res/label.npy")
-    for file in logits:
-        logit = np.load(os.path.join("../res", file))
-        test_eval(logit, label, file.split(".")[0])
+# def main():
+#     logits = ["bert_logit.npy", "cnn+att_logit.npy", "pcnn+att_logit.npy"]
+#     label = np.load("../res/label.npy")
+#     for file in logits:
+#         logit = np.load(os.path.join("../res", file))
+#         test_eval(logit, label, file.split(".")[0])
 
-main()
+# main()

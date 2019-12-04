@@ -186,34 +186,41 @@ class Dataloader:
                     self.data_pos2[i][j] = j - pos2 + Config.sen_len
                 pos_first = min(pos1, pos2)
                 pos_second = max(pos1, pos2)
+                len_first = len(head.split()) if pos1 < pos2 else len(tail.split())
+                len_second = len(tail.split()) if pos1 < pos2 else len(head.split())
                 self.data_pcnn_mask[i][0:pos_first+1] = 1
                 self.data_pcnn_mask[i][pos_first+1:pos_second+1] = 2
                 self.data_pcnn_mask[i][pos_second+1:len(words)] = 3
 
+                self.data_word[i][0:pos_first] = 0
+                self.data_word[i][pos_first+len_first:pos_second] = 0
+                self.data_word[i][pos_second+len_second:-1] = 0
+
+
                 # for bert encoder
-                bert_tokens = bert_tokenizer.tokenize(sentence)
-                head_tokens = bert_tokenizer.tokenize(head)
-                tail_tokens = bert_tokenizer.tokenize(tail)
-                try:
-                    head_pos = bert_tokens.index(head_tokens[0])
-                except:
-                    print("error head")
-                    head_pos = 10
-                bert_tokens.insert(head_pos, "[unused0]")
-                bert_tokens.insert(head_pos+len(head_tokens)+1, "[unused1]")
-                try:
-                    tail_pos = bert_tokens.index(tail_tokens[0])
-                except:
-                    print("error tail")
-                    tail_pos = 10
-                bert_tokens.insert(tail_pos, "[unused2]")
-                bert_tokens.insert(tail_pos+len(tail_tokens)+1, "[unused3]")
-                bert_tokens.insert(0, "[CLS]")
-                bert_tokens.append("[SEP]")
-                length = min(len(bert_tokens), Config.sen_len)
-                self.data_input_ids[i][0:length] = bert_tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
-                self.data_attention_mask[i][0:length] = 1
-                self.data_length[i] = length    
+                # bert_tokens = bert_tokenizer.tokenize(sentence)
+                # head_tokens = bert_tokenizer.tokenize(head)
+                # tail_tokens = bert_tokenizer.tokenize(tail)
+                # try:
+                #     head_pos = bert_tokens.index(head_tokens[0])
+                # except:
+                #     print("error head")
+                #     head_pos = 10
+                # bert_tokens.insert(head_pos, "[unused0]")
+                # bert_tokens.insert(head_pos+len(head_tokens)+1, "[unused1]")
+                # try:
+                #     tail_pos = bert_tokens.index(tail_tokens[0])
+                # except:
+                #     print("error tail")
+                #     tail_pos = 10
+                # bert_tokens.insert(tail_pos, "[unused2]")
+                # bert_tokens.insert(tail_pos+len(tail_tokens)+1, "[unused3]")
+                # bert_tokens.insert(0, "[CLS]")
+                # bert_tokens.append("[SEP]")
+                # length = min(len(bert_tokens), Config.sen_len)
+                # self.data_input_ids[i][0:length] = bert_tokenizer.convert_tokens_to_ids(bert_tokens[0:length])
+                # self.data_attention_mask[i][0:length] = 1
+                # self.data_length[i] = length    
                 
             print("begin multiple thread processing...")
             pool = mp.Pool(40)
