@@ -198,6 +198,7 @@ class Dataloader:
                 # self.data_word[i][pos_first:pos_first+len_first] = 0
                 # self.data_word[i][pos_second:pos_second+len_second] = 0
 
+                
                 # for bert encoder
                 # bert_tokens = bert_tokenizer.tokenize(sentence)
                 # head_tokens = bert_tokenizer.tokenize(head)

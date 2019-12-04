@@ -44,6 +44,7 @@ class BertDecoder(nn.Module):
         masked_indices = torch.bernoulli(torch.full(labels.shape, Config.mlm_probability)).bool() & (token_mask.bool())
         labels[~masked_indices] = -1  # We only compute loss on masked tokens
 
+
         # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
         indices_replaced = torch.bernoulli(torch.full(labels.shape, 0.8)).bool() & masked_indices
         inputs[indices_replaced] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)

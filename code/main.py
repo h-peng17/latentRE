@@ -278,8 +278,7 @@ if __name__ == "__main__":
         os.mkdir(Config.save_path)
     # set seed
     set_seed(args)
-    
-    
+
     if args.mode == "train":
         # train
         train_dataloader = Dataloader('train', 'relfact' if Config.train_bag else 'ins', Config.dataset)

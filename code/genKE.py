@@ -26,6 +26,7 @@ def gen_knowledge(mode, dataset):
             if rel not in knowledge[entities]:
                 knowledge[entities].append(rel)
     
+    
     print('sav...')
     json.dump(knowledge, open(os.path.join("../data/knowledge", dataset+"_"+mode+".json"), 'w'))
 

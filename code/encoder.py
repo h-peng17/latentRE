@@ -50,6 +50,7 @@ class CNN(nn.Module):
         text, _ = torch.max(x, -1)
         return text
     
+    
     def pieceWiseMaxPooling(self, x, mask):
         '''
         x.size(): `(B, H, L)`

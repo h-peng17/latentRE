@@ -22,6 +22,7 @@ class Depparser():
         governor1 = json.load(open("../data/parser_governor1.json"))
         parser_tokened_word.extend(word1)
         parser_governor.extend(governor1)
+        
         # origin_data
         data = json.load(open("../data/nyt/train.json"))
         data.sort(key=lambda a: a['head']['id'] + '#' + a['tail']['id'] + "#" + a["relation"])

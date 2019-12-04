@@ -149,6 +149,7 @@ def random_sample():
     json.dump(dev, open("../data/wiki/dev.json", "w"))
     json.dump(test, open("../data/wiki/test.json", "w"))
 
+
 random_sample()
 
 

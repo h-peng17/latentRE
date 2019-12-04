@@ -131,6 +131,7 @@ class BagTest(object):
             self.pr = pr
         self.clean()
         return auc
+        
 
 
 

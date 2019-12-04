@@ -45,6 +45,7 @@ if args.index == 0:
 elif args.index == 1:
     iter = range(255000, len(data))
     depparser(1, iter, data)
+    
 
 
         

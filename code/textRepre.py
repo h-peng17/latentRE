@@ -37,3 +37,4 @@ class TextRepre(nn.Module):
             mask = 1 - self.mask_embedding(mask).transpose(1, 2) # (B, L) -> (B, L, 3) -> (B, 3, L)
             text = self.cnn(embedding.permute(0,2,1), mask)
         return text
+        

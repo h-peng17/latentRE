@@ -67,6 +67,7 @@ class LatentRE(nn.Module):
                 text = self.encoder(word, pos1, pos2)
             logit = self.selector(text, scope)
             return logit
+            
 
 
            

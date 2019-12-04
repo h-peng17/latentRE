@@ -28,7 +28,7 @@ class Config():
     bag_type = "one"
     optimizer = 'sgd'
     dump_logit = False
-    
+
     # neg sample
     down_size = False
     neg_samples = 1 
