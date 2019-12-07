@@ -4,7 +4,6 @@ import os
 
 
 
-
 def convert(filename, mode):
     ori_data = json.load(open(os.path.join("../data/wiki", filename)))
     data = []
@@ -17,7 +16,7 @@ def convert(filename, mode):
             head["word"] = ori_data[rel][i]["triple"]["h"]["name"]
             head["id"] = ori_data[rel][i]["triple"]["h"]["id"]
             tail["word"] = ori_data[rel][i]["triple"]["t"]["name"]
-            tail["id"] = ori_data[rel][i]["triple"]['t']['name']
+            tail["id"] = ori_data[rel][i]["triple"]['t']['id']
             ins["sentence"] = sen
             ins["head"] = head
             ins["tail"] = tail
@@ -148,6 +147,11 @@ def random_sample():
     json.dump(train, open("../data/wiki/train.json", "w"))
     json.dump(dev, open("../data/wiki/dev.json", "w"))
     json.dump(test, open("../data/wiki/test.json", "w"))
+
+# convert("train_set.json", "train.json")
+# convert("val_set.json", "dev.json")
+# convert("common_test_set.json", "test1.json")
+# convert("uncommon_test_set.json","test2.json")
 
 
 random_sample()

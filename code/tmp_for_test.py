@@ -124,9 +124,9 @@ class BagTest(object):
         if auc > self.auc:
             self.auc = auc
             self.epoch = epoch
-            # if Config.dump_logit:
-                # np.save(os.path.join("../res", Config.info+"_logit.npy"), np.array(bag_logit))
-            np.save(os.path.join("../res", "label.npy"), np.array(self.multi_label))
+            if Config.dump_logit:
+                np.save(os.path.join("../res", Config.info+"_logit.npy"), np.array(bag_logit))
+            # np.save(os.path.join("../res", "label.npy"), np.array(self.multi_label))
         if pr > self.pr:
             self.pr = pr
         self.clean()

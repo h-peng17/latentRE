@@ -179,7 +179,7 @@ def train(args, model, train_dataloader, dev_dataloader, train_ins_tot, dev_ins_
             torch.save(checkpoint, os.path.join(Config.save_path, Config.info))
         
     # after iterator, save the best perfomance
-    log(bagTest.auc, bagTest.epoch)
+    # log(bagTest.auc, bagTest.epoch)
 
 def test(model, test_dataloader, ins_tot):
     # just for bag test
@@ -191,22 +191,24 @@ def test(model, test_dataloader, ins_tot):
     model.eval()
     Config.training = False
     test_iterator = (ins_tot // Config.batch_size) if (ins_tot % Config.batch_size == 0) else (ins_tot // Config.batch_size + 1)
-    for j in range(test_iterator):
-        batch_data = test_dataloader.next_batch()
-        inputs = {
-            'input_ids':batch_data[0].cuda(),
-            'attention_mask':batch_data[1].cuda(),
-            'word':batch_data[2].cuda(),
-            'pos1':batch_data[3].cuda(),
-            'pos2':batch_data[4].cuda(),
-            'pcnn_mask':batch_data[5].cuda(),
-            'scope':batch_data[6],
-        }
-        logit = model(**inputs)
-        bagTest.update(logit.cpu().detach())
-        sys.stdout.write("test_processed: %.3f\r" % ((j+1) / test_iterator))
-        sys.stdout.flush()
-    bagTest.forward(0)
+    with torch.no_grad():
+        for j in range(test_iterator):
+            batch_data = test_dataloader.next_batch()
+            inputs = {
+                'input_ids':batch_data[0].cuda(),
+                'attention_mask':batch_data[1].cuda(),
+                'word':batch_data[2].cuda(),
+                'pos1':batch_data[3].cuda(),
+                'pos2':batch_data[4].cuda(),
+                'pcnn_mask':batch_data[5].cuda(),
+                'scope':batch_data[6],
+            }
+            logit = model(**inputs)
+            bagTest.update(logit.cpu().detach())
+            sys.stdout.write("test_processed: %.3f\r" % ((j+1) / test_iterator))
+            sys.stdout.flush()
+        auc = bagTest.forward(0)
+        log(auc, 0)
 
 
 if __name__ == "__main__":
@@ -293,12 +295,21 @@ if __name__ == "__main__":
               dev_dataloader.entpair_tot if Config.eval_bag else dev_dataloader.instance_tot)
 
         # test
+        os.system("rm -r ../data/pre_processed_data/*")
         test_dataloader = Dataloader('test', 'entpair' if Config.eval_bag else 'ins', Config.dataset)
-        model = LatentRE(train_dataloader.word_vec, train_dataloader.weight)
+        model = LatentRE(test_dataloader.word_vec, test_dataloader.weight)
         model.cuda()
         test(model,
              test_dataloader,
              test_dataloader.entpair_tot if Config.eval_bag else test_dataloader.instance_tot)
+    elif args.mode == "test":
+        test_dataloader = Dataloader('test', 'entpair' if Config.eval_bag else 'ins', Config.dataset)
+        model = LatentRE(test_dataloader.word_vec, test_dataloader.weight)
+        model.cuda()
+        test(model,
+             test_dataloader,
+             test_dataloader.entpair_tot if Config.eval_bag else test_dataloader.instance_tot)
+
 
 
 

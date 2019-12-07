@@ -78,7 +78,7 @@ def _save(result, filename):
 
 
 def drawAll(logit_name):
-    rel2id = json.load(open("../data/nyt/rel2id.json"))
+    rel2id = json.load(open("../data/wiki/rel2id.json"))
     logit = np.load(os.path.join("../res", logit_name))
     label = np.load("../res/label.npy")
     result = []
@@ -88,7 +88,7 @@ def drawAll(logit_name):
         auc = eval(logit, label, i)
         _result.append(auc)
         result.append(_result)
-    _save(result, "nyt_bert_result.json")
+    _save(result, "wiki_bert_result.json")
     # draw(result, logit_name.split(".")[0])
 
 
